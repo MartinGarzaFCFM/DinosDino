@@ -1,0 +1,156 @@
+
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: beige;
+    margin: 0px;
+    background: url("../assets/FondoPisada.jpg") no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+}
+
+#header,
+#main,
+#footer {
+    display: flex;
+    margin: 0;
+}
+
+#header {
+    height: 5em;
+    justify-content: space-between;
+   
+    
+}
+
+#main {
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.500);
+    padding: 1em;
+}
+
+#back {
+    background: url("../assets/settingss.gif");
+   width: 840;
+   height: 480;
+}
+
+#footer {
+    justify-content: center;
+    height: 5em;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-size: 2em;
+    color: #ebebeb;
+    -webkit-text-stroke: 1px rgb(24, 24, 24);
+}
+
+.fix-stroke {
+    paint-order: stroke fill;
+ }
+ 
+
+
+.btnplay:hover {
+    /* Start the shake animation and make the animation last for 0.5 seconds */
+    animation: shake 0.5s;
+    background:url('https://media.tenor.com/EDkwc6V_2lcAAAAj/leaves.gif');
+    /* When the animation is finished, start again */
+    animation-iteration-count: infinite;
+  }
+  
+  @keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+  }
+
+  .containerIMG{
+    position: relative;
+    text-align: center;
+    color: white;
+  }
+  
+ 
+
+  /* Top right text */
+  .top-right {
+    position: absolute;
+    top: 40px;
+    right: 100px;
+  }
+  
+  /* Bottom right text */
+  .slider-bright {
+    position: absolute;
+    bottom: 0px;
+    right: 45px;
+  }
+  
+  .slider-sound {
+    position: absolute;
+    bottom: 100px;
+    right: 45px;
+  }
+  .slider {
+    width: 100%;
+    width: 300px;
+  height: 100px;
+  outline: none;
+  opacity: 0.7;
+  }
+  .slider:hover {
+  opacity: 1;
+
+
+}
+
+
+.diff1:hover {
+    box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+  }
+
+  .diff1 {
+    background-color: #5f5f5f;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+  }
+
+  
+.diff2:hover {
+    box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+  }
+
+  .diff2 {
+    background-color: #ff3838;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+  }

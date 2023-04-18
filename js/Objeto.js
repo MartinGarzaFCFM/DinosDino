@@ -1,58 +1,86 @@
 import * as THREE from 'three';
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export class Objeto {
-    constructor(gltfLoader, scene, rutaModelo, escala, posicion) {
-        this.obj;
-        this.modelo;
-        this.boundingBox;
-        this.helper;
+    constructor(scene, rutaModelo, escala, posicion, rotacion) {
+        const extension = rutaModelo.split('.');
 
-        const getModel = this.loadModel(rutaModelo, gltfLoader);
-        this.modelo = getModel();
+        switch (extension[3].toLowerCase()) {
+            case "gltf":
+                const gltfLoader = new GLTFLoader();
+                gltfLoader.load(rutaModelo, function (gltf) {
+                    let obj = gltf.scene;
+                    obj.scale.set(escala.x, escala.y, escala.z);
+                    obj.position.set(posicion.x, posicion.y, posicion.z);
+                    obj.rotation.set(rotacion.x, rotacion.y, rotacion.z);
 
-        
-        gltfLoader.load(rutaModelo, function (gltf) {
-            var obj = gltf.scene;
-            obj.scale.set(escala.x, escala.y, escala.z);
-            obj.position.set(posicion.x, posicion.y, posicion.z);
+                    obj.traverse(function (node) {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = false;
+                        }
+                    });
+                    scene.add(obj);
 
-            obj.traverse(function (node) {
-                if (node.isMesh) {
-                    node.castShadow = true;
-                    obj.receiveShadow = true;
-                }
-            });
-            scene.add(obj);
-            //modelo = this.obj;
+                    let boundingbox = new THREE.Box3().setFromObject(obj);
+                    let helper = new THREE.Box3Helper(boundingbox, 0xffff00);
 
-            var boundingbox = new THREE.Box3().setFromObject(obj);
-            var helper = new THREE.Box3Helper(boundingbox, 0xffff00);
+                    //Actualizar el Helper del Bounding Box
+                    boundingbox.setFromObject(obj);
+                    const center = boundingbox.getCenter(new THREE.Vector3());
+                    const size = boundingbox.getSize(new THREE.Vector3());
+                    helper.position.copy(center);
+                    helper.scale.set(size.x, size.y, size.z);
 
-            //Actualizar el Helper del Bounding Box
-            boundingbox.setFromObject(obj);
-            const center = boundingbox.getCenter(new THREE.Vector3());
-            const size = boundingbox.getSize(new THREE.Vector3());
-            helper.position.copy(center);
-            helper.scale.set(size.x, size.y, size.z);
+                    scene.add(helper);
+                },
+                    (xhr) => {
+                        //console.log("Rex " + (xhr.loaded / xhr.total) * 100 + "% cargado");
+                    },
+                    (error) => {
+                        console.log(error);
+                    });
 
-            scene.add(helper);
-        });
+                break;
+            
+            case "fbx":
+                const fbxLoader = new FBXLoader();
+                fbxLoader.load(rutaModelo, function (fbx) {
+                    fbx.castShadow = true;
+                    fbx.position.set(posicion.x, posicion.y, posicion.z);
+                    fbx.rotation.set(rotacion.x, rotacion.y, rotacion.z);
+                    fbx.scale.set(escala.x, escala.y, escala.z);
+
+                    fbx.traverse(function (node) {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = true;
+                        }
+                    });
+                    scene.add(fbx);
+
+                    let boundingbox = new THREE.Box3().setFromObject(fbx);
+                    let helper = new THREE.Box3Helper(boundingbox, 0xffff00);
+
+                    //Actualizar el Helper del Bounding Box
+                    boundingbox.setFromObject(fbx);
+                    const center = boundingbox.getCenter(new THREE.Vector3());
+                    const size = boundingbox.getSize(new THREE.Vector3());
+                    helper.position.copy(center);
+                    helper.scale.set(size.x, size.y, size.z);
+
+                    scene.add(helper);
+                },
+                    (xhr) => {
+                        //console.log((xhr.loaded / xhr.total) * 100 + "% cargado");
+                    },
+                    (error) => {
+                        console.log(error);
+                    });
+
+            default:
+                break;
+        }
     }
-
-    loadModel(url, gltfLoader) {
-        let model;
-
-        const onLoad = (gltf) => {
-            model = gltf.scene;
-        };
-
-        gltfLoader.load(url, onLoad);
-
-        return () => model;
-    }
-
-    grita() {
-        console.dir(this.modelo);
-    }
-
 }

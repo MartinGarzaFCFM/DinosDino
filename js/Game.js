@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
 import { Objeto } from "./Objeto.js";
-import { Objeto2 } from "./Objeto2.js";
+
 
 
 class Game {
@@ -13,8 +12,6 @@ class Game {
 
         //Loaders
         const textureLoader = new THREE.TextureLoader();
-        const fbxLoader = new FBXLoader();
-        const gltfLoader = new GLTFLoader();
 
         //Scene
         this.backgroundColor = new THREE.Color("#34495E");
@@ -42,7 +39,7 @@ class Game {
 
         //DirectionalLight
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        this.directionalLight.position.set(20, 200, 10); 
+        this.directionalLight.position.set(0, 200, 0);
         this.directionalLight.target.position.set(0, 0, 0);
         this.directionalLight.castShadow = true;
         //Propiedades de sombra 
@@ -83,81 +80,84 @@ class Game {
 
         this.scene.add(this.plane);
 
-        //Un cubo
-        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x00aaff });
-        this.cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        this.cube.scale.set(1, 1, 1);
-        this.scene.add(this.cube);
-
         //Orbit
         const cameraControl = new OrbitControls(this.camera, this.renderer.domElement);
 
+        //Carro
+        const carro = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Carro/carro.gltf`, 
+            new THREE.Vector3(22, 22, 22), 
+            new THREE.Vector3(-650, 0, 800), 
+            new THREE.Vector3(0, 0, 0)
+            );
+
+        //Edificios
+        const labModel = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Edificios/Lab.fbx`, 
+            new THREE.Vector3(5, 5, 5), 
+            new THREE.Vector3(-800, 0, 800), 
+            new THREE.Vector3(0, Math.PI/2, 0)
+        );
+
+        const museo = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Edificios/Museo.fbx`, 
+            new THREE.Vector3(5, 5, 5), 
+            new THREE.Vector3(800, 0, -600), 
+            new THREE.Vector3(0, Math.PI/90, 0)
+        );
+
+        const cabin = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Cabin.fbx`, 
+            new THREE.Vector3(2, 2, 2), 
+            new THREE.Vector3(-80, 0, -200), 
+            new THREE.Vector3(0, Math.PI/90, 0)
+        );
+
+        //Traps
+        const trampa = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Trampa.fbx`, 
+            new THREE.Vector3(22, 22, 22), 
+            new THREE.Vector3(800, 0, 800), 
+            new THREE.Vector3(0, Math.PI/90, 0)
+        );
+
+
+        
         //Cantidad de Huevos de Dinosaurio
         const huevos = new Array(10);
 
+        //Huevo
+        const huevo = new Objeto(this.scene, 
+            `${assetsPath}modelos/Huevo.fbx`, 
+            new THREE.Vector3(5, 5, 5), 
+            new THREE.Vector3(-800, 0, -800),
+            new THREE.Vector3(0, 0, 0)
+            );
+
         //T-Rex
-        const rexy = new Objeto2(`${assetsPath}modelos/Rexy/scene.gltf`, this.scene, new THREE.Vector3(22, 22, 22), new THREE.Vector3(30, 0, -20));
-        const model = rexy.getModel();
-
-        console.log(model);
-
-        delete rexy(this.scene, model);
-
-
-        //const rexy = new Objeto(gltfLoader, this.scene, `${assetsPath}modelos/Rexy/scene.gltf`, new THREE.Vector3(22, 22, 22), new THREE.Vector3(30, 0, -20));
-        //console.dir(rexy);
-        //rexy.grita();
+        const rexy = new Objeto(
+            this.scene, 
+            `${assetsPath}modelos/Rexy/scene.gltf`, 
+            new THREE.Vector3(22, 22, 22), 
+            new THREE.Vector3(30, 0, -20), 
+            new THREE.Vector3(0, 0, 0)
+            );
 
         this.animate();
+        console.dir(this.scene);
     }
-    
+
     animate() {
         const game = this;
 
         requestAnimationFrame(function () { game.animate(); });
 
         this.renderer.render(this.scene, this.camera);
-    }
-
-    cargarGLTF(gltfLoader, scene, rutaModelo, escala, posicion) {
-        var result, model, boundingbox, helper;
-
-        gltfLoader.load(rutaModelo, function (gltf) {
-            let obj = gltf.scene;
-            obj.scale.set(escala.x, escala.y, escala.z);
-            obj.position.set(posicion.x, posicion.y, posicion.z);
-
-            obj.traverse(function (node) {
-                if (node.isMesh) {
-                    node.castShadow = true;
-                    obj.receiveShadow = true;
-                }
-            });
-            scene.add(obj);
-            model = obj;
-
-            boundingbox = new THREE.Box3().setFromObject(obj);
-            helper = new THREE.Box3Helper(boundingbox, 0xffff00);
-
-            //Actualizar el Helper del Bounding Box
-            boundingbox.setFromObject(obj);
-            const center = boundingbox.getCenter(new THREE.Vector3());
-            const size = boundingbox.getSize(new THREE.Vector3());
-            helper.position.copy(center);
-            helper.scale.set(size.x, size.y, size.z);
-
-            scene.add(helper);
-
-        },
-            function (xhr) {
-
-                console.log(result);
-            });
-
-        console.log(result);
-        return model;
-
     }
 }
 

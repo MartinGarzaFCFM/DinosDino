@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+
+import * as CANNON from "cannon-es";
+import CannonDebugger from 'cannon-es-debugger';
+
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { Objeto } from "./Objeto.js";
@@ -17,6 +21,35 @@ class Game {
         this.backgroundColor = new THREE.Color("#34495E");
         this.scene = new THREE.Scene();
         this.scene.background = this.backgroundColor;
+
+        //CANNON ES
+        //Preparar Mundo Fisico
+        this.physicsWorld = new CANNON.World({
+            gravity: new CANNON.Vec3(0, -9.82, 0)
+        });
+        //Terreno Base
+        const groundBody = new CANNON.Body({
+            type: CANNON.Body.STATIC,
+            shape: new CANNON.Plane()
+        });
+        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        this.physicsWorld.addBody(groundBody);
+        //Esfera TEST
+        const radius = 100;
+        this.sphereBody = new CANNON.Body({
+            mass: 50,
+            shape: new CANNON.Sphere(radius)
+        });
+        this.sphereBody.position.set(0, 1000, 0);
+        this.physicsWorld.addBody(this.sphereBody);
+
+        const esferaGeometry = new THREE.SphereGeometry(radius);
+        const esferaMaterial = new THREE.MeshNormalMaterial();
+        this.esfera = new THREE.Mesh(esferaGeometry, esferaMaterial);
+        this.scene.add(this.esfera);
+
+        //CANNON DEBUGGER
+        this.cannonDebugger = new CannonDebugger(this.scene, this.physicsWorld);
 
         //Camera
         this.cameraPosition = new THREE.Vector3(-800, 600, 800);
@@ -125,8 +158,6 @@ class Game {
             new THREE.Vector3(800, 0, 800), 
             new THREE.Vector3(0, Math.PI/90, 0)
         );
-
-
         
         //Cantidad de Huevos de Dinosaurio
         const huevos = new Array(10);
@@ -154,6 +185,12 @@ class Game {
 
     animate() {
         const game = this;
+
+        game.physicsWorld.fixedStep();
+        game.cannonDebugger.update();
+
+        game.esfera.position.copy(game.sphereBody.position);
+        game.esfera.quaternion.copy(game.sphereBody.quaternion);
 
         requestAnimationFrame(function () { game.animate(); });
 

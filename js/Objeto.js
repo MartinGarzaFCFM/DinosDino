@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import * as CANNON from "cannon-es";
+import CannonDebugger from 'cannon-es-debugger';
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export class Objeto {
-    constructor(scene, rutaModelo, escala, posicion, rotacion) {
+    constructor(scene, physicsWorld, rutaModelo, escala, posicion, rotacion) {
         const extension = rutaModelo.split('.');
 
         switch (extension[3].toLowerCase()) {
@@ -33,6 +35,14 @@ export class Objeto {
                     helper.position.copy(center);
                     helper.scale.set(size.x, size.y, size.z);
 
+                    //Physics
+                    let boxBody = new CANNON.Body({
+                        type: CANNON.Body.STATIC,
+                        position: new CANNON.Vec3(center.x, center.y, center.z),
+                        shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2))
+                    });
+                    physicsWorld.addBody(boxBody);
+
                     scene.add(helper);
                 },
                     (xhr) => {
@@ -43,7 +53,7 @@ export class Objeto {
                     });
 
                 break;
-            
+
             case "fbx":
                 const fbxLoader = new FBXLoader();
                 fbxLoader.load(rutaModelo, function (fbx) {
@@ -60,8 +70,10 @@ export class Objeto {
                     });
                     scene.add(fbx);
 
+
                     let boundingbox = new THREE.Box3().setFromObject(fbx);
                     let helper = new THREE.Box3Helper(boundingbox, 0xffff00);
+
 
                     //Actualizar el Helper del Bounding Box
                     boundingbox.setFromObject(fbx);
@@ -69,6 +81,14 @@ export class Objeto {
                     const size = boundingbox.getSize(new THREE.Vector3());
                     helper.position.copy(center);
                     helper.scale.set(size.x, size.y, size.z);
+
+                    //Physics
+                    let boxBody = new CANNON.Body({
+                        type: CANNON.Body.STATIC,
+                        position: new CANNON.Vec3(center.x, center.y, center.z),
+                        shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2))
+                    });
+                    physicsWorld.addBody(boxBody);
 
                     scene.add(helper);
                 },

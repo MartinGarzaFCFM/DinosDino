@@ -104,3 +104,7 @@ export class Objeto {
         }
     }
 }
+
+class Carro extends Objeto{
+
+}

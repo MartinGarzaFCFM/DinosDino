@@ -18,6 +18,8 @@ let scene;
 let physicsWorld;
 let groundBody;
 let cannonDebugger;
+//Materiales Interaccion
+let wheelMaterial;
 //Objetos Fisicos
 let sphereBody;
 let esfera;
@@ -44,8 +46,11 @@ let skydomeSize;
 let cameraControl;
 
 //Control de Auto
+let chassisBody;
 let vehicleModel;
+let vehicleBB;
 let vehicle;
+let vehicleOffset;
 
 
 init();
@@ -88,99 +93,92 @@ async function init() {
     });
     scene.add(vehicleModel);
 
-    let boundingbox = new THREE.Box3().setFromObject(vehicleModel);
-    let helper = new THREE.Box3Helper(boundingbox, 0xffff00);
+    vehicleBB = new THREE.Box3().setFromObject(vehicleModel);
+    let vehiclehelper = new THREE.Box3Helper(vehicleBB, 0xffff00);
 
     //Actualizar el Helper del Bounding Box
-    boundingbox.setFromObject(vehicleModel);
-    const center = boundingbox.getCenter(new THREE.Vector3());
-    const size = boundingbox.getSize(new THREE.Vector3());
-    helper.position.copy(center);
-    helper.scale.set(size.x, size.y, size.z);
+    vehicleBB.setFromObject(vehicleModel);
+    const center = vehicleBB.getCenter(new THREE.Vector3());
+    const size = vehicleBB.getSize(new THREE.Vector3());
+    //vehiclehelper.position.copy(center);
+    //vehiclehelper.scale.set(size.x, size.y, size.z);
+
 
     //2doCarro
-    //Prepara el Suelo y agrega
-    const groundMaterial = new CANNON.Material("groundMaterial");
-    const wheelMaterial = new CANNON.Material("wheelMaterial");
-    const wheelGroundContactMaterial = new CANNON.ContactMaterial(wheelMaterial, groundMaterial, {
-        friction: 0.3,
-        restitution: 1,
-        contactEquationStiffness: 1000
-    });
-
-    physicsWorld.addContactMaterial(wheelGroundContactMaterial);
-
-    const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
-    const chassisBody = new CANNON.Body({ mass: 150, material: groundMaterial });
+    const chassisShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
+    chassisBody = new CANNON.Body({ mass: 200 });
+    const chassisRotation = new CANNON.Quaternion();
+    chassisRotation.setFromEuler(0, Math.PI / 2, 0);
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(0, 2, 0);
+    chassisBody.position.set(center.x, center.y, center.z);
+    chassisBody.quaternion.copy(chassisRotation);
     physicsWorld.addBody(chassisBody);
 
+
+
     const options = {
-        radius: 0.5,
+        radius: size.y / 4,
         directionLocal: new CANNON.Vec3(0, -1, 0),
         suspensionStiffness: 30,
         suspensionRestLength: 0.3,
-        frictionSlip: 5,
+        frictionSlip: 1.4,
         dampingRelaxation: 2.3,
         dampingCompression: 4.4,
-        maxSuspensionForce: 100000,
+        maxSuspensionForce: 10000,
         rollInfluence: 0.01,
-        axleLocal: new CANNON.Vec3(-1, 0, -1),
-        chassisConnectionPointLocal: new CANNON.Vec3(1, 1, 0),
+        axleLocal: new CANNON.Vec3(0, 0, 1),
+        chassisConnectionPointLocal: new CANNON.Vec3(-1, 0, 1),
         maxSuspensionTravel: 0.3,
         customSlidingRotationalSpeed: -30,
-        useCustomSlidingRotationalSpeed: true
-    };
+        useCustomSlidingRotationalSpeed: true,
+    }
+
+
 
     //Crear Vehiculo
     vehicle = new CANNON.RaycastVehicle({
         chassisBody: chassisBody,
-        indexRightAxis: 0,
-        indexUpAxis: 1,
-        indexForwardAxis: 2
     });
 
-    options.chassisConnectionPointLocal.set(1, 0, -1);
+    options.chassisConnectionPointLocal.set(-size.x/2, -size.y / 2, size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(-1, 0, -1);
+    options.chassisConnectionPointLocal.set(-size.x/2, -size.y / 2, -size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(1, 0, 1);
+    options.chassisConnectionPointLocal.set(size.x/2, -size.y / 2, size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(-1, 0, 1);
+    options.chassisConnectionPointLocal.set(size.x/2, -size.y / 2, -size.z / 2);
     vehicle.addWheel(options);
 
     vehicle.addToWorld(physicsWorld);
 
-    const wheelBodies = [];
-    vehicle.wheelInfos.forEach(function(wheel){
-        const cylinderShape = new CANNON.Cylinder(wheel.radius, wheel.radius, wheel.radius / 2, 20);
-        const wheelBody = new CANNON.Body({mass: 1, material: wheelMaterial});
-        const q = new CANNON.Quaternion();
-        q.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
-        wheelBody.addShape(cylinderShape, new CANNON.Vec3(), q);
-        wheelBodies.push(wheelBody);
-        physicsWorld.addBody(wheelBody);
-    });
+    const wheelBodies = []    
+    vehicle.wheelInfos.forEach((wheel) => {
+        const cylinderShape = new CANNON.Cylinder(wheel.radius, wheel.radius, wheel.radius / 2, 20)
+        const wheelBody = new CANNON.Body({
+            mass: 0,
+            material: wheelMaterial,
+        })
+        wheelBody.type = CANNON.Body.KINEMATIC
+        wheelBody.collisionFilterGroup = 0 // turn off collisions
+        const quaternion = new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
+        wheelBody.addShape(cylinderShape, new CANNON.Vec3(), quaternion)
+        wheelBodies.push(wheelBody)
+        //demo.addVisual(wheelBody)
+        physicsWorld.addBody(wheelBody)
+    })
 
     //Actualizar Llantas
-    physicsWorld.addEventListener("postStep", function(){
-        let index = 0;
-        vehicle.wheelInfos.forEach(function(wheel){
-            vehicle.updateWheelTransform(index);
-            const t = wheel.worldTransform;
-            wheelBodies[index].position.copy(t.position);
-            wheelBodies[index].quaternion.copy(t.quaternion);
-            index++;
-        });
-    });
+    physicsWorld.addEventListener('postStep', () => {
+        for (let i = 0; i < vehicle.wheelInfos.length; i++) {
+            vehicle.updateWheelTransform(i)
+            const transform = vehicle.wheelInfos[i].worldTransform
+            const wheelBody = wheelBodies[i]
+            wheelBody.position.copy(transform.position)
+            wheelBody.quaternion.copy(transform.quaternion)
+        }
+    })
 
-    console.log(wheelBodies);
-
-    
-
-
-    scene.add(helper);
+    scene.add(vehiclehelper);
 
     animate();
 }
@@ -192,13 +190,15 @@ function animate() {
     esfera.position.copy(sphereBody.position);
     esfera.quaternion.copy(sphereBody.quaternion);
 
-    //vehicleModel.position.copy(vehicleRBody.position);
-    //vehicleModel.quaternion.copy(vehicleRBody.quaternion);
+    vehicleModel.position.copy(chassisBody.position);
+    vehicleModel.position.y -= 30
+    vehicleModel.quaternion.copy(chassisBody.quaternion);
 
-    //console.log(vehicleRBody.quaternion);
+    vehicleBB.setFromObject(vehicleModel);
 
-    
+    //vehicleOffset = new THREE.Vector3().subVectors(vehicleBB.getCenter(new THREE.Vector3()), chassisBody.position);
 
+    //vehicleModel.position.add(vehicleOffset);
 
 
     requestAnimationFrame(function () { animate(); });
@@ -206,69 +206,42 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-function updateDrive(forward, turn){
-    const maxSteerVal = 0.5;
-    const maxForce = 1000;
-    const brakeForce = 10;
-
-    const force = maxForce * forward;
-    const steer = maxSteerVal * turn;
-
-    if (forward!=0){
-        vehicle.setBrake(0, 0);
-        vehicle.setBrake(0, 1);
-        vehicle.setBrake(0, 2);
-        vehicle.setBrake(0, 3);
-
-        vehicle.applyEngineForce(force, 2);
-        vehicle.applyEngineForce(force, 3);
-    }
-    else{
-        vehicle.setBrake(brakeForce, 0);
-        vehicle.setBrake(brakeForce, 1);
-        vehicle.setBrake(brakeForce, 2);
-        vehicle.setBrake(brakeForce, 3);
-    }
-
-    vehicle.setSteeringValue(steer, 0);
-    vehicle.setSteeringValue(steer, 1);
-}
-
 document.addEventListener('keydown', (event) => {
-    const maxSteerVal = Math.PI / 4;
-    const maxForce = 50000;
+    const maxSteerVal = 1.0;
+    const maxForce = 4000;
+    const brakeForce = 100000;
 
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            updateDrive(1, 0);
-            //vehicleControl.setWheelForce(maxForce, 0);
-            //vehicleControl.setWheelForce(maxForce, 1);
-            break;
+            vehicle.applyEngineForce(-maxForce, 2);
+            vehicle.applyEngineForce(-maxForce, 3);
+            break
 
         case 's':
         case 'ArrowDown':
-            updateDrive(-1, 0);
-            //vehicleControl.setWheelForce(-maxForce / 2, 0);
-            //vehicleControl.setWheelForce(-maxForce / 2, 1);
-            break;
+            vehicle.applyEngineForce(maxForce, 2);
+            vehicle.applyEngineForce(maxForce, 3);
+            break
 
         case 'a':
         case 'ArrowLeft':
-            updateDrive(0, -1);
-            //vehicleControl.setSteeringValue(-maxSteerVal, 0);
-            //vehicleControl.setSteeringValue(-maxSteerVal, 1);
-            break;
+            vehicle.setSteeringValue(maxSteerVal, 0);
+            vehicle.setSteeringValue(maxSteerVal, 1);
+            break
 
         case 'd':
         case 'ArrowRight':
-            updateDrive(0, 1);
-            //vehicleControl.setSteeringValue(maxSteerVal, 0);
-            //vehicleControl.setSteeringValue(maxSteerVal, 1);
-            break;
-        case ' ':
-            console.log("Space");
-            break;
+            vehicle.setSteeringValue(-maxSteerVal, 0);
+            vehicle.setSteeringValue(-maxSteerVal, 1);
+            break
+
+        case 'b':
+            vehicle.setBrake(brakeForce, 0);
+            vehicle.setBrake(brakeForce, 1);
+            vehicle.setBrake(brakeForce, 2);
+            vehicle.setBrake(brakeForce, 3);
+            break
     }
 });
 
@@ -276,31 +249,34 @@ document.addEventListener('keyup', (event) => {
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            updateDrive(0, 0);
-            //vehicleControl.setWheelForce(0, 0);
-            //vehicleControl.setWheelForce(0, 1);
-            break;
+            vehicle.applyEngineForce(0, 2)
+            vehicle.applyEngineForce(0, 3)
+            break
 
         case 's':
         case 'ArrowDown':
-            updateDrive(0, 0);
-            //vehicleControl.setWheelForce(0, 0);
-            //vehicleControl.setWheelForce(0, 1);
-            break;
+            vehicle.applyEngineForce(0, 2)
+            vehicle.applyEngineForce(0, 3)
+            break
 
         case 'a':
         case 'ArrowLeft':
-            updateDrive(0, 0);
-            //vehicleControl.setSteeringValue(0, 0);
-            //vehicleControl.setSteeringValue(0, 1);
-            break;
+            vehicle.setSteeringValue(0, 0)
+            vehicle.setSteeringValue(0, 1)
+            break
 
         case 'd':
         case 'ArrowRight':
-            updateDrive(0, 0);
-            //vehicleControl.setSteeringValue(0, 0);
-            //vehicleControl.setSteeringValue(0, 1);
-            break;
+            vehicle.setSteeringValue(0, 0)
+            vehicle.setSteeringValue(0, 1)
+            break
+
+        case 'b':
+            vehicle.setBrake(0, 0)
+            vehicle.setBrake(0, 1)
+            vehicle.setBrake(0, 2)
+            vehicle.setBrake(0, 3)
+            break
     }
 });
 
@@ -446,27 +422,70 @@ function setupCamera() {
 function setupCannon() {
     //Prepara el mundo
     physicsWorld = new CANNON.World({
-        gravity: new CANNON.Vec3(0, -10, 0),
+        gravity: new CANNON.Vec3(0, -30, 0),
         broadphase: new CANNON.SAPBroadphase(physicsWorld)
     });
 
-    physicsWorld.defaultContactMaterial.friction = 100;
+    physicsWorld.defaultContactMaterial.friction = 0;
 
-    
+    // Add the ground
+    const sizeX = 64;
+    const sizeZ = 64;
+    const matrix = []
+    for (let i = 0; i < sizeX; i++) {
+        matrix.push([])
+        for (let j = 0; j < sizeZ; j++) {
+            if (i === 0 || i === sizeX - 1 || j === 0 || j === sizeZ - 1) {
+                const height = 3
+                matrix[i].push(height)
+                continue
+            }
+
+            const height = Math.cos((i / sizeX) * Math.PI * 5) * Math.cos((j / sizeZ) * Math.PI * 5) * 2 + 2
+            matrix[i].push(height)
+        }
+    }
+
+    //Prepara el Suelo y agrega
+    const groundMaterial = new CANNON.Material('ground');
+    const heightfieldShape = new CANNON.Heightfield(matrix, {
+        elementSize: 2000 / sizeX,
+    })
+    const heightfieldBody = new CANNON.Body({ mass: 0, material: groundMaterial, })
+    heightfieldBody.addShape(heightfieldShape)
+    heightfieldBody.position.set(
+        // -((sizeX - 1) * heightfieldShape.elementSize) / 2,
+        -(sizeX * heightfieldShape.elementSize) / 2,
+        -1,
+        // ((sizeZ - 1) * heightfieldShape.elementSize) / 2
+        (sizeZ * heightfieldShape.elementSize) / 2
+    )
+    heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
+    physicsWorld.addBody(heightfieldBody)
+
+    // Define interactions between wheels and ground
+    wheelMaterial = new CANNON.Material('wheel');
+    const wheel_ground = new CANNON.ContactMaterial(wheelMaterial, groundMaterial, {
+        friction: 0.3,
+        restitution: 0,
+        contactEquationStiffness: 1000,
+    })
+    physicsWorld.addContactMaterial(wheel_ground);
 
 
-    groundBody = new CANNON.Body({
-        type: CANNON.Body.STATIC,
-        shape: new CANNON.Plane(),
-        friction: -1
-    });
+    //PRIMER TERRENO
+    groundBody = new CANNON.Body({ mass: 0, material: groundMaterial });
+    groundBody.addShape(new CANNON.Plane());
+    groundBody.position.set(0, 0, 0);
     groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-    physicsWorld.addBody(groundBody);
+    //physicsWorld.addBody(groundBody);
+
+
 
     //Prepara una Esfera
     const radius = 100;
     sphereBody = new CANNON.Body({
-        mass: 50,
+        mass: 1,
         shape: new CANNON.Sphere(radius)
     });
     sphereBody.position.set(0, 1000, 0);

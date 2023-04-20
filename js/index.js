@@ -29,6 +29,8 @@ let esfera;
 //Camara
 let cameraPosition;
 let camera;
+//Permitir que siga al jugador
+let cameraFollow = true;
 
 //Renderer
 let renderer;
@@ -43,7 +45,7 @@ let skydomeSize;
 //Terreno
 
 //Orbit
-let cameraControl;
+let orbitControls;
 
 //Control de Auto
 let chassisBody;
@@ -74,7 +76,14 @@ async function init() {
     setupTerreno();
 
     //Orbit
-    cameraControl = new OrbitControls(camera, renderer.domElement);
+    orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.rotateSpeed = 1.0
+    orbitControls.zoomSpeed = 1.2
+    orbitControls.dampingFactor = 0.2
+    orbitControls.minDistance = 10
+    orbitControls.maxDistance = 500
+    orbitControls.enablePan = false
+    orbitControls.enabled = false
 
     cargarModelos();
 
@@ -116,6 +125,9 @@ async function init() {
 
 
 
+
+
+
     const options = {
         radius: size.y / 4,
         directionLocal: new CANNON.Vec3(0, -1, 0),
@@ -138,20 +150,23 @@ async function init() {
     //Crear Vehiculo
     vehicle = new CANNON.RaycastVehicle({
         chassisBody: chassisBody,
+        //indexRightAxis: 0,
+        //indexForwardAxis: 1,
+        //indexUpAxis: 2
     });
 
-    options.chassisConnectionPointLocal.set(-size.x/2, -size.y / 2, size.z / 2);
+    options.chassisConnectionPointLocal.set(-size.x / 2, -size.y / 2, size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(-size.x/2, -size.y / 2, -size.z / 2);
+    options.chassisConnectionPointLocal.set(-size.x / 2, -size.y / 2, -size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(size.x/2, -size.y / 2, size.z / 2);
+    options.chassisConnectionPointLocal.set(size.x / 2, -size.y / 2, size.z / 2);
     vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(size.x/2, -size.y / 2, -size.z / 2);
+    options.chassisConnectionPointLocal.set(size.x / 2, -size.y / 2, -size.z / 2);
     vehicle.addWheel(options);
 
     vehicle.addToWorld(physicsWorld);
 
-    const wheelBodies = []    
+    const wheelBodies = []
     vehicle.wheelInfos.forEach((wheel) => {
         const cylinderShape = new CANNON.Cylinder(wheel.radius, wheel.radius, wheel.radius / 2, 20)
         const wheelBody = new CANNON.Body({
@@ -187,6 +202,10 @@ function animate() {
     physicsWorld.fixedStep();
     cannonDebugger.update();
 
+    let playerPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+    let playerRotation = chassisBody.quaternion.w;
+    if (cameraFollow) followPlayer(playerPosition, playerRotation);
+
     esfera.position.copy(sphereBody.position);
     esfera.quaternion.copy(sphereBody.quaternion);
 
@@ -195,6 +214,8 @@ function animate() {
     vehicleModel.quaternion.copy(chassisBody.quaternion);
 
     vehicleBB.setFromObject(vehicleModel);
+
+    console.log(camera.rotation);
 
     //vehicleOffset = new THREE.Vector3().subVectors(vehicleBB.getCenter(new THREE.Vector3()), chassisBody.position);
 
@@ -216,32 +237,33 @@ document.addEventListener('keydown', (event) => {
         case 'ArrowUp':
             vehicle.applyEngineForce(-maxForce, 2);
             vehicle.applyEngineForce(-maxForce, 3);
-            break
+            break;
 
         case 's':
         case 'ArrowDown':
             vehicle.applyEngineForce(maxForce, 2);
             vehicle.applyEngineForce(maxForce, 3);
-            break
+            break;
 
         case 'a':
         case 'ArrowLeft':
             vehicle.setSteeringValue(maxSteerVal, 0);
             vehicle.setSteeringValue(maxSteerVal, 1);
-            break
+            break;
 
         case 'd':
         case 'ArrowRight':
             vehicle.setSteeringValue(-maxSteerVal, 0);
             vehicle.setSteeringValue(-maxSteerVal, 1);
-            break
+            break;
 
         case 'b':
             vehicle.setBrake(brakeForce, 0);
             vehicle.setBrake(brakeForce, 1);
             vehicle.setBrake(brakeForce, 2);
             vehicle.setBrake(brakeForce, 3);
-            break
+            break;
+
     }
 });
 
@@ -277,9 +299,23 @@ document.addEventListener('keyup', (event) => {
             vehicle.setBrake(0, 2)
             vehicle.setBrake(0, 3)
             break
+
+        case 'g':
+            //camera.position.set(0, 800, 0);
+            orbitControls.enablePan = !orbitControls.enablePan;
+            orbitControls.enabled = !orbitControls.enabled;
+            //orbitControls.reset();
+            cameraFollow = !cameraFollow;
+            break;
     }
 });
 
+function followPlayer(carro, rotation) {
+    camera.position.set(carro.x, carro.y + 30, carro.z - 100);
+    camera.rotateOnAxis(carro, camera.rotation.y + rotation);
+    camera.lookAt(carro.x, carro.y + 20, carro.z);
+    
+}
 
 
 function cargarModelos() {

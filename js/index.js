@@ -330,8 +330,8 @@ function cargarModelos() {
         physicsWorld,
         `${assetsPath}modelos/Edificios/Lab.fbx`,
         new THREE.Vector3(5, 5, 5),
-        new THREE.Vector3(-800, 0, 800),
-        new THREE.Vector3(0, Math.PI / 2, 0)
+        new THREE.Vector3(-800, 0, 800), // posicion 
+        new THREE.Vector3(0, Math.PI / 2, 0) // rotacion
     );
 
     const museo = new Objeto(
@@ -437,7 +437,7 @@ function setupLights() {
     directionalLight.shadow.camera.bottom = -2000;
     scene.add(directionalLight);
 }
-
+// window contruct 
 function setupRenderer() {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);

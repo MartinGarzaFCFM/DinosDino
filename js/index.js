@@ -315,7 +315,8 @@ document.addEventListener('keyup', (event) => {
    import { 
     getDatabase,
     ref, 
-    onValue 
+    onValue, 
+    set
  } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
@@ -353,6 +354,11 @@ async function login(){
      // IdP data available using getAdditionalUserInfo(result)
      // ...
      console.log(user);
+     let randomNum = Math.random();
+let equis = (randomNum * 1800) - 900;
+let randomNum2 = Math.random();
+let zeta = (randomNum2 * 1800) - 900;
+     writeUserData(user.uid, {x:equis, z:zeta});
    }).catch((error) => {
      // Handle Errors here.
      const errorCode = error.code;
@@ -382,12 +388,38 @@ const user = await login();
 btnLogout.addEventListener("click", async () =>{
     const user = await logout();
 });
-
+//recupera datos de la bdd
 const starCountRef = ref(db, 'jugadores');
 onValue(starCountRef, (snapshot) => {
   const data = snapshot.val();
-  updateStarCount(postElement, data);
+ 
+  Object.entries(data).forEach(([key, value]) => {
+    const jugador = scene.getObjectByName(key);
+    if (!jugador) {
+// Generar un número aleatorio entre 0 y 1
+
+        const rexy = new Objeto(
+            scene,
+            physicsWorld,
+            `${assetsPath}modelos/Rexy/scene.gltf`,
+            new THREE.Vector3(10, 10, 10), // escala
+            new THREE.Vector3(value.x, 0, value.z), // posicion 
+            new THREE.Vector3(0, 0, 0) //rotacion
+        );
+    }
+   
+  });
+
 });
+//escribe datos en la bdd
+function writeUserData(userId, position) {
+    
+    set(ref(db, 'jugadores/'+ userId), {
+      x: position.x,
+      z: position.z,
+    });
+  }
+
 //#endregion
 
 function followPlayer(carro) {

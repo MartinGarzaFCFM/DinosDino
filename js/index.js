@@ -302,6 +302,93 @@ document.addEventListener('keyup', (event) => {
             break;
     }
 });
+//#region Multiplayer
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
+  import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    signOut
+   } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
+
+   import { 
+    getDatabase,
+    ref, 
+    onValue 
+ } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCddIjH2EdQBJ8TKOhqeu3GKfYIe0L27zg",
+    authDomain: "dinos-1ca44.firebaseapp.com",
+    databaseURL: "https://dinos-1ca44-default-rtdb.firebaseio.com",
+    projectId: "dinos-1ca44",
+    storageBucket: "dinos-1ca44.appspot.com",
+    messagingSenderId: "143087109647",
+    appId: "1:143087109647:web:2703672e7544556a33c57a"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  // Initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(app);
+auth.languageCode = 'es';
+const provider = new GoogleAuthProvider();
+const db = getDatabase();
+
+const btnLogin = document.getElementById("btn-login");
+const btnLogout = document.getElementById("btn-out");
+async function login(){
+
+    const resp = await signInWithPopup(auth, provider)
+   .then((result) => {
+     // This gives you a Google Access Token. You can use it to access the Google API.
+     const credential = GoogleAuthProvider.credentialFromResult(result);
+     const token = credential.accessToken;
+     // The signed-in user info.
+     const user = result.user;
+     // IdP data available using getAdditionalUserInfo(result)
+     // ...
+     console.log(user);
+   }).catch((error) => {
+     // Handle Errors here.
+     const errorCode = error.code;
+     const errorMessage = error.message;
+     // The email of the user's account used.
+     const email = error.customData.email;
+     // The AuthCredential type that was used.
+     const credential = GoogleAuthProvider.credentialFromError(error);
+     // ...
+     console.log(errorMessage);
+   });
+ }
+ 
+ async function logout(){
+    const resp = await getAuth();
+signOut(auth).then(() => {
+    console.log('SALISTE');
+}).catch((error) => {
+    console.log('ERROR');
+});
+ }
+
+btnLogin.addEventListener("click", async () =>{
+const user = await login();
+});
+
+btnLogout.addEventListener("click", async () =>{
+    const user = await logout();
+});
+
+const starCountRef = ref(db, 'jugadores');
+onValue(starCountRef, (snapshot) => {
+  const data = snapshot.val();
+  updateStarCount(postElement, data);
+});
+//#endregion
 
 function followPlayer(carro) {
     let camPos = new THREE.Vector3(), camQuat = new THREE.Quaternion();

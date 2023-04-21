@@ -4,6 +4,7 @@ import CannonDebugger from 'cannon-es-debugger';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Objeto } from "./Objeto.js";
 import { gltfLoader } from "./loaders/gltfLoader.js";
+import { CrearOrbitControls } from './OrbitControls.js';
 
 //PATHS
 let assetsPath;
@@ -32,6 +33,10 @@ let camera;
 //Permitir que siga al jugador
 let cameraFollow = true;
 
+let chaseCam = new THREE.Object3D();
+let chaseCamPivot = new THREE.Object3D();
+
+
 //Renderer
 let renderer;
 
@@ -52,7 +57,6 @@ let chassisBody;
 let vehicleModel;
 let vehicleBB;
 let vehicle;
-let vehicleOffset;
 
 
 init();
@@ -76,16 +80,14 @@ async function init() {
     setupTerreno();
 
     //Orbit
-    orbitControls = new OrbitControls(camera, renderer.domElement);
-    orbitControls.rotateSpeed = 1.0
-    orbitControls.zoomSpeed = 1.2
-    orbitControls.dampingFactor = 0.2
-    orbitControls.minDistance = 10
-    orbitControls.maxDistance = 500
-    orbitControls.enablePan = false
-    orbitControls.enabled = false
+    orbitControls = CrearOrbitControls(camera, renderer);
 
     cargarModelos();
+
+    //ChaseCam
+    chaseCam.position.set(10, 2.5, 0);
+    chaseCam.rotateY(Math.PI / 2)
+    chaseCamPivot.add(chaseCam);
 
 
     const gltfData = await gltfLoader();
@@ -94,6 +96,7 @@ async function init() {
     vehicleModel.position.set(-650, 10, 800);
     vehicleModel.rotation.set(0, 0, 0);
 
+    
     vehicleModel.traverse(function (node) {
         if (node.isMesh) {
             node.castShadow = true;
@@ -101,6 +104,8 @@ async function init() {
         }
     });
     scene.add(vehicleModel);
+    vehicleModel.add(chaseCamPivot);
+    
 
     vehicleBB = new THREE.Box3().setFromObject(vehicleModel);
     let vehiclehelper = new THREE.Box3Helper(vehicleBB, 0xffff00);
@@ -117,16 +122,11 @@ async function init() {
     const chassisShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
     chassisBody = new CANNON.Body({ mass: 200 });
     const chassisRotation = new CANNON.Quaternion();
-    chassisRotation.setFromEuler(0, Math.PI / 2, 0);
+    chassisRotation.setFromEuler(0, -Math.PI / 2, 0);
     chassisBody.addShape(chassisShape);
     chassisBody.position.set(center.x, center.y, center.z);
     chassisBody.quaternion.copy(chassisRotation);
     physicsWorld.addBody(chassisBody);
-
-
-
-
-
 
     const options = {
         radius: size.y / 4,
@@ -202,9 +202,10 @@ function animate() {
     physicsWorld.fixedStep();
     cannonDebugger.update();
 
-    let playerPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
-    let playerRotation = chassisBody.quaternion.w;
-    if (cameraFollow) followPlayer(playerPosition, playerRotation);
+    //let playerPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+    let playerPosition = chassisBody.Matrix
+    let playerRotation = chassisBody.quaternion;
+    if (cameraFollow) followPlayer(playerPosition);
 
     esfera.position.copy(sphereBody.position);
     esfera.quaternion.copy(sphereBody.quaternion);
@@ -214,16 +215,8 @@ function animate() {
     vehicleModel.quaternion.copy(chassisBody.quaternion);
 
     vehicleBB.setFromObject(vehicleModel);
-
-    console.log(camera.rotation);
-
-    //vehicleOffset = new THREE.Vector3().subVectors(vehicleBB.getCenter(new THREE.Vector3()), chassisBody.position);
-
-    //vehicleModel.position.add(vehicleOffset);
-
-
+    
     requestAnimationFrame(function () { animate(); });
-
     renderer.render(scene, camera);
 }
 
@@ -310,10 +303,16 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
-function followPlayer(carro, rotation) {
-    camera.position.set(carro.x, carro.y + 30, carro.z - 100);
-    camera.rotateOnAxis(carro, camera.rotation.y + rotation);
-    camera.lookAt(carro.x, carro.y + 20, carro.z);
+function followPlayer(carro) {
+    let camPos = new THREE.Vector3(), camQuat = new THREE.Quaternion();
+    chaseCam.getWorldPosition(camPos);
+    camera.position.lerpVectors(camera.position, camPos, 0.1);
+    chaseCam.getWorldQuaternion(camQuat);
+    camera.quaternion.slerp(camQuat, 0.1);
+
+    //camera.position.lerp(carro, 0.2);
+    //camera.position.set(carro.x, carro.y + 30, carro.z - 100);
+    //camera.lookAt(carro.x, carro.y + 20, carro.z);
     
 }
 

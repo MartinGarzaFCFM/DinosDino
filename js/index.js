@@ -302,6 +302,125 @@ document.addEventListener('keyup', (event) => {
             break;
     }
 });
+//#region Multiplayer
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
+  import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    signOut
+   } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
+
+   import { 
+    getDatabase,
+    ref, 
+    onValue, 
+    set
+ } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCddIjH2EdQBJ8TKOhqeu3GKfYIe0L27zg",
+    authDomain: "dinos-1ca44.firebaseapp.com",
+    databaseURL: "https://dinos-1ca44-default-rtdb.firebaseio.com",
+    projectId: "dinos-1ca44",
+    storageBucket: "dinos-1ca44.appspot.com",
+    messagingSenderId: "143087109647",
+    appId: "1:143087109647:web:2703672e7544556a33c57a"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  // Initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(app);
+auth.languageCode = 'es';
+const provider = new GoogleAuthProvider();
+const db = getDatabase();
+
+const btnLogin = document.getElementById("btn-login");
+const btnLogout = document.getElementById("btn-out");
+async function login(){
+
+    const resp = await signInWithPopup(auth, provider)
+   .then((result) => {
+     // This gives you a Google Access Token. You can use it to access the Google API.
+     const credential = GoogleAuthProvider.credentialFromResult(result);
+     const token = credential.accessToken;
+     // The signed-in user info.
+     const user = result.user;
+     // IdP data available using getAdditionalUserInfo(result)
+     // ...
+     console.log(user);
+     let randomNum = Math.random();
+let equis = (randomNum * 1800) - 900;
+let randomNum2 = Math.random();
+let zeta = (randomNum2 * 1800) - 900;
+     writeUserData(user.uid, {x:equis, z:zeta});
+   }).catch((error) => {
+     // Handle Errors here.
+     const errorCode = error.code;
+     const errorMessage = error.message;
+     // The email of the user's account used.
+     const email = error.customData.email;
+     // The AuthCredential type that was used.
+     const credential = GoogleAuthProvider.credentialFromError(error);
+     // ...
+     console.log(errorMessage);
+   });
+ }
+ 
+ async function logout(){
+    const resp = await getAuth();
+signOut(auth).then(() => {
+    console.log('SALISTE');
+}).catch((error) => {
+    console.log('ERROR');
+});
+ }
+
+btnLogin.addEventListener("click", async () =>{
+const user = await login();
+});
+
+btnLogout.addEventListener("click", async () =>{
+    const user = await logout();
+});
+//recupera datos de la bdd
+const starCountRef = ref(db, 'jugadores');
+onValue(starCountRef, (snapshot) => {
+  const data = snapshot.val();
+ 
+  Object.entries(data).forEach(([key, value]) => {
+    const jugador = scene.getObjectByName(key);
+    if (!jugador) {
+// Generar un número aleatorio entre 0 y 1
+
+        const rexy = new Objeto(
+            scene,
+            physicsWorld,
+            `${assetsPath}modelos/Rexy/scene.gltf`,
+            new THREE.Vector3(10, 10, 10), // escala
+            new THREE.Vector3(value.x, 0, value.z), // posicion 
+            new THREE.Vector3(0, 0, 0) //rotacion
+        );
+    }
+   
+  });
+
+});
+//escribe datos en la bdd
+function writeUserData(userId, position) {
+    
+    set(ref(db, 'jugadores/'+ userId), {
+      x: position.x,
+      z: position.z,
+    });
+  }
+
+//#endregion
 
 function followPlayer(carro) {
     let camPos = new THREE.Vector3(), camQuat = new THREE.Quaternion();
@@ -330,8 +449,8 @@ function cargarModelos() {
         physicsWorld,
         `${assetsPath}modelos/Edificios/Lab.fbx`,
         new THREE.Vector3(5, 5, 5),
-        new THREE.Vector3(-800, 0, 800),
-        new THREE.Vector3(0, Math.PI / 2, 0)
+        new THREE.Vector3(-800, 0, 800), // posicion 
+        new THREE.Vector3(0, Math.PI / 2, 0) // rotacion
     );
 
     const museo = new Objeto(
@@ -437,7 +556,7 @@ function setupLights() {
     directionalLight.shadow.camera.bottom = -2000;
     scene.add(directionalLight);
 }
-
+// window contruct 
 function setupRenderer() {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);

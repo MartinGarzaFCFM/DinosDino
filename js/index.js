@@ -92,11 +92,11 @@ async function init() {
 
     const gltfData = await gltfLoader();
     vehicleModel = gltfData.scene;
-    vehicleModel.scale.set(22, 22, 22);
+    vehicleModel.scale.set(4, 4, 4);
     vehicleModel.position.set(-650, 10, 800);
     vehicleModel.rotation.set(0, 0, 0);
 
-    
+
     vehicleModel.traverse(function (node) {
         if (node.isMesh) {
             node.castShadow = true;
@@ -105,7 +105,7 @@ async function init() {
     });
     scene.add(vehicleModel);
     vehicleModel.add(chaseCamPivot);
-    
+
 
     vehicleBB = new THREE.Box3().setFromObject(vehicleModel);
     let vehiclehelper = new THREE.Box3Helper(vehicleBB, 0xffff00);
@@ -120,7 +120,7 @@ async function init() {
 
     //2doCarro
     const chassisShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
-    chassisBody = new CANNON.Body({ mass: 200 });
+    chassisBody = new CANNON.Body({ mass: 400 });
     const chassisRotation = new CANNON.Quaternion();
     chassisRotation.setFromEuler(0, -Math.PI / 2, 0);
     chassisBody.addShape(chassisShape);
@@ -129,13 +129,13 @@ async function init() {
     physicsWorld.addBody(chassisBody);
 
     const options = {
-        radius: size.y / 4,
+        radius: size.y / 3,
         directionLocal: new CANNON.Vec3(0, -1, 0),
         suspensionStiffness: 30,
         suspensionRestLength: 0.3,
-        frictionSlip: 1.4,
+        frictionSlip: 3,
         dampingRelaxation: 2.3,
-        dampingCompression: 4.4,
+        dampingCompression: 5.4,
         maxSuspensionForce: 10000,
         rollInfluence: 0.01,
         axleLocal: new CANNON.Vec3(0, 0, 1),
@@ -170,7 +170,7 @@ async function init() {
     vehicle.wheelInfos.forEach((wheel) => {
         const cylinderShape = new CANNON.Cylinder(wheel.radius, wheel.radius, wheel.radius / 2, 20)
         const wheelBody = new CANNON.Body({
-            mass: 0,
+            mass: 0.5,
             material: wheelMaterial,
         })
         wheelBody.type = CANNON.Body.KINEMATIC
@@ -211,19 +211,19 @@ function animate() {
     esfera.quaternion.copy(sphereBody.quaternion);
 
     vehicleModel.position.copy(chassisBody.position);
-    vehicleModel.position.y -= 30
+    vehicleModel.position.y -= 5.0
     vehicleModel.quaternion.copy(chassisBody.quaternion);
 
     vehicleBB.setFromObject(vehicleModel);
-    
+
     requestAnimationFrame(function () { animate(); });
     renderer.render(scene, camera);
 }
 
 document.addEventListener('keydown', (event) => {
-    const maxSteerVal = 1.0;
-    const maxForce = 4000;
-    const brakeForce = 100000;
+    const maxSteerVal =  0.9;
+    const maxForce = 3500;
+    const brakeForce = 400;
 
     switch (event.key) {
         case 'w':
@@ -313,7 +313,7 @@ function followPlayer(carro) {
     //camera.position.lerp(carro, 0.2);
     //camera.position.set(carro.x, carro.y + 30, carro.z - 100);
     //camera.lookAt(carro.x, carro.y + 20, carro.z);
-    
+
 }
 
 
@@ -457,7 +457,7 @@ function setupCamera() {
 function setupCannon() {
     //Prepara el mundo
     physicsWorld = new CANNON.World({
-        gravity: new CANNON.Vec3(0, -30, 0),
+        gravity: new CANNON.Vec3(0, -20, 0),
         broadphase: new CANNON.SAPBroadphase(physicsWorld)
     });
 
@@ -501,7 +501,7 @@ function setupCannon() {
     // Define interactions between wheels and ground
     wheelMaterial = new CANNON.Material('wheel');
     const wheel_ground = new CANNON.ContactMaterial(wheelMaterial, groundMaterial, {
-        friction: 0.3,
+        friction: 0.9,
         restitution: 0,
         contactEquationStiffness: 1000,
     })

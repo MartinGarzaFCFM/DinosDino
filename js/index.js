@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import * as CANNON from "cannon-es";
 import CannonDebugger from 'cannon-es-debugger';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { Objeto } from "./Objeto.js";
-import { gltfLoader } from "./loaders/gltfLoader.js";
-import { CrearOrbitControls } from './OrbitControls.js';
+import { huevoCrear } from "./Huevo.js";
+import { carroCrear } from "./Carro.js";
+import { dinosaurioCrear } from "./Dinosaurio.js";
+import { edificioCrear } from "./Edificio.js";
 
 //PATHS
-let assetsPath;
+const assetsPath = "../assets/";
 
 //Loaders
 let textureLoader;
@@ -15,15 +16,16 @@ let textureLoader;
 //Scene
 let scene;
 
+//Reloj para las animaciones
+const clock = new THREE.Clock();
+
 //Preparar el Mundo Fisico
 let physicsWorld;
 let groundBody;
 let cannonDebugger;
 //Materiales Interaccion
 let wheelMaterial;
-//Objetos Fisicos
-let sphereBody;
-let esfera;
+
 
 
 
@@ -52,149 +54,53 @@ let skydomeSize;
 //Orbit
 let orbitControls;
 
-//Control de Auto
-let chassisBody;
-let vehicleModel;
-let vehicleBB;
-let vehicle;
+//Jugador
+const player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
+
+//Dinosaurios
+var rexy;
+
+var huevos;
 
 
 init();
 async function init() {
-    //locacion de Assets
-    assetsPath = "../assets/";
-
-    //Loaders
-    textureLoader = new THREE.TextureLoader();
-
     //Scene
     const backgroundColor = new THREE.Color("#34495E");
     scene = new THREE.Scene();
     scene.background = backgroundColor;
 
+    //Loaders
+    textureLoader = new THREE.TextureLoader();
+
+
     setupCannon();
+
     setupCamera();
     setupRenderer();
     setupLights()
     setupSkyDome();
     setupTerreno();
 
+    await cargarModelos();
     //Orbit
-    orbitControls = CrearOrbitControls(camera, renderer);
+    orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.rotateSpeed = 1.0;
+    orbitControls.zoomSpeed = 1.2;
+    orbitControls.dampingFactor = 0.2;
+    orbitControls.minDistance = 10;
+    orbitControls.maxDistance = 500;
+    orbitControls.enablePan = false
+    orbitControls.enabled = false;
 
-    cargarModelos();
-
-    //ChaseCam
-    chaseCam.position.set(10, 2.5, 0);
-    chaseCam.rotateY(Math.PI / 2)
-    chaseCamPivot.add(chaseCam);
-
-
-    const gltfData = await gltfLoader();
-    vehicleModel = gltfData.scene;
-    vehicleModel.scale.set(4, 4, 4);
-    vehicleModel.position.set(-650, 10, 800);
-    vehicleModel.rotation.set(0, 0, 0);
-
-
-    vehicleModel.traverse(function (node) {
-        if (node.isMesh) {
-            node.castShadow = true;
-            node.receiveShadow = false;
-        }
-    });
-    scene.add(vehicleModel);
-    vehicleModel.add(chaseCamPivot);
-
-
-    vehicleBB = new THREE.Box3().setFromObject(vehicleModel);
-    let vehiclehelper = new THREE.Box3Helper(vehicleBB, 0xffff00);
-
-    //Actualizar el Helper del Bounding Box
-    vehicleBB.setFromObject(vehicleModel);
-    const center = vehicleBB.getCenter(new THREE.Vector3());
-    const size = vehicleBB.getSize(new THREE.Vector3());
-    //vehiclehelper.position.copy(center);
-    //vehiclehelper.scale.set(size.x, size.y, size.z);
-
-
-    //2doCarro
-    const chassisShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
-    chassisBody = new CANNON.Body({ mass: 400 });
-    const chassisRotation = new CANNON.Quaternion();
-    chassisRotation.setFromEuler(0, -Math.PI / 2, 0);
-    chassisBody.addShape(chassisShape);
-    chassisBody.position.set(center.x, center.y, center.z);
-    chassisBody.quaternion.copy(chassisRotation);
-    physicsWorld.addBody(chassisBody);
-
-    const options = {
-        radius: size.y / 3,
-        directionLocal: new CANNON.Vec3(0, -1, 0),
-        suspensionStiffness: 30,
-        suspensionRestLength: 0.3,
-        frictionSlip: 3,
-        dampingRelaxation: 2.3,
-        dampingCompression: 5.4,
-        maxSuspensionForce: 10000,
-        rollInfluence: 0.01,
-        axleLocal: new CANNON.Vec3(0, 0, 1),
-        chassisConnectionPointLocal: new CANNON.Vec3(-1, 0, 1),
-        maxSuspensionTravel: 0.3,
-        customSlidingRotationalSpeed: -30,
-        useCustomSlidingRotationalSpeed: true,
-    }
-
-
-
-    //Crear Vehiculo
-    vehicle = new CANNON.RaycastVehicle({
-        chassisBody: chassisBody,
-        //indexRightAxis: 0,
-        //indexForwardAxis: 1,
-        //indexUpAxis: 2
-    });
-
-    options.chassisConnectionPointLocal.set(-size.x / 2, -size.y / 2, size.z / 2);
-    vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(-size.x / 2, -size.y / 2, -size.z / 2);
-    vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(size.x / 2, -size.y / 2, size.z / 2);
-    vehicle.addWheel(options);
-    options.chassisConnectionPointLocal.set(size.x / 2, -size.y / 2, -size.z / 2);
-    vehicle.addWheel(options);
-
-    vehicle.addToWorld(physicsWorld);
-
-    const wheelBodies = []
-    vehicle.wheelInfos.forEach((wheel) => {
-        const cylinderShape = new CANNON.Cylinder(wheel.radius, wheel.radius, wheel.radius / 2, 20)
-        const wheelBody = new CANNON.Body({
-            mass: 0.5,
-            material: wheelMaterial,
-        })
-        wheelBody.type = CANNON.Body.KINEMATIC
-        wheelBody.collisionFilterGroup = 0 // turn off collisions
-        const quaternion = new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
-        wheelBody.addShape(cylinderShape, new CANNON.Vec3(), quaternion)
-        wheelBodies.push(wheelBody)
-        //demo.addVisual(wheelBody)
-        physicsWorld.addBody(wheelBody)
-    })
-
-    //Actualizar Llantas
-    physicsWorld.addEventListener('postStep', () => {
-        for (let i = 0; i < vehicle.wheelInfos.length; i++) {
-            vehicle.updateWheelTransform(i)
-            const transform = vehicle.wheelInfos[i].worldTransform
-            const wheelBody = wheelBodies[i]
-            wheelBody.position.copy(transform.position)
-            wheelBody.quaternion.copy(transform.quaternion)
-        }
-    })
-
-    scene.add(vehiclehelper);
-
+    //Player
+    player.load(
+        scene,
+        physicsWorld,
+        { x: -650, y: 10, z: 800 },
+        { x: 0, y: 0, z: 0 },
+        wheelMaterial
+    );
     animate();
 }
 
@@ -202,59 +108,70 @@ function animate() {
     physicsWorld.fixedStep();
     cannonDebugger.update();
 
-    //let playerPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
-    let playerPosition = chassisBody.Matrix
-    let playerRotation = chassisBody.quaternion;
-    if (cameraFollow) followPlayer(playerPosition);
+    //Reloj aplicado para animaciones
+    rexy.mixer.update(clock.getDelta());
 
-    esfera.position.copy(sphereBody.position);
-    esfera.quaternion.copy(sphereBody.quaternion);
+    rexy.perseguir();
 
-    vehicleModel.position.copy(chassisBody.position);
-    vehicleModel.position.y -= 5.0
-    vehicleModel.quaternion.copy(chassisBody.quaternion);
+    if (cameraFollow) followPlayer();
 
-    vehicleBB.setFromObject(vehicleModel);
+    orbitControls.target.copy(player.model.position);
+    orbitControls.update();
+
+    player.model.position.copy(player.cannonBody.position);
+    player.model.position.y -= 5.0
+    player.model.quaternion.copy(player.cannonBody.quaternion);
+
+    player.boundingBox.setFromObject(player.model);
+
+    huevos.forEach((huevo) => {
+        huevo.collect(player.boundingBox);
+        if (huevo.collected) {
+            scene.remove(huevo.model);
+            huevo.boundingBox.makeEmpty();
+        }
+    });
+
 
     requestAnimationFrame(function () { animate(); });
     renderer.render(scene, camera);
 }
 
 document.addEventListener('keydown', (event) => {
-    const maxSteerVal =  0.9;
+    const maxSteerVal = 0.9;
     const maxForce = 3500;
     const brakeForce = 400;
 
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            vehicle.applyEngineForce(-maxForce, 2);
-            vehicle.applyEngineForce(-maxForce, 3);
+            player.control.applyEngineForce(-maxForce, 2);
+            player.control.applyEngineForce(-maxForce, 3);
             break;
 
         case 's':
         case 'ArrowDown':
-            vehicle.applyEngineForce(maxForce, 2);
-            vehicle.applyEngineForce(maxForce, 3);
+            player.control.applyEngineForce(maxForce, 2);
+            player.control.applyEngineForce(maxForce, 3);
             break;
 
         case 'a':
         case 'ArrowLeft':
-            vehicle.setSteeringValue(maxSteerVal, 0);
-            vehicle.setSteeringValue(maxSteerVal, 1);
+            player.control.setSteeringValue(maxSteerVal, 0);
+            player.control.setSteeringValue(maxSteerVal, 1);
             break;
 
         case 'd':
         case 'ArrowRight':
-            vehicle.setSteeringValue(-maxSteerVal, 0);
-            vehicle.setSteeringValue(-maxSteerVal, 1);
+            player.control.setSteeringValue(-maxSteerVal, 0);
+            player.control.setSteeringValue(-maxSteerVal, 1);
             break;
 
         case 'b':
-            vehicle.setBrake(brakeForce, 0);
-            vehicle.setBrake(brakeForce, 1);
-            vehicle.setBrake(brakeForce, 2);
-            vehicle.setBrake(brakeForce, 3);
+            player.control.setBrake(brakeForce, 0);
+            player.control.setBrake(brakeForce, 1);
+            player.control.setBrake(brakeForce, 2);
+            player.control.setBrake(brakeForce, 3);
             break;
 
     }
@@ -264,65 +181,65 @@ document.addEventListener('keyup', (event) => {
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            vehicle.applyEngineForce(0, 2)
-            vehicle.applyEngineForce(0, 3)
+            player.control.applyEngineForce(0, 2)
+            player.control.applyEngineForce(0, 3)
             break
 
         case 's':
         case 'ArrowDown':
-            vehicle.applyEngineForce(0, 2)
-            vehicle.applyEngineForce(0, 3)
+            player.control.applyEngineForce(0, 2)
+            player.control.applyEngineForce(0, 3)
             break
 
         case 'a':
         case 'ArrowLeft':
-            vehicle.setSteeringValue(0, 0)
-            vehicle.setSteeringValue(0, 1)
+            player.control.setSteeringValue(0, 0)
+            player.control.setSteeringValue(0, 1)
             break
 
         case 'd':
         case 'ArrowRight':
-            vehicle.setSteeringValue(0, 0)
-            vehicle.setSteeringValue(0, 1)
+            player.control.setSteeringValue(0, 0)
+            player.control.setSteeringValue(0, 1)
             break
 
         case 'b':
-            vehicle.setBrake(0, 0)
-            vehicle.setBrake(0, 1)
-            vehicle.setBrake(0, 2)
-            vehicle.setBrake(0, 3)
+            player.control.setBrake(0, 0)
+            player.control.setBrake(0, 1)
+            player.control.setBrake(0, 2)
+            player.control.setBrake(0, 3)
             break
 
         case 'g':
             //camera.position.set(0, 800, 0);
             orbitControls.enablePan = !orbitControls.enablePan;
             orbitControls.enabled = !orbitControls.enabled;
-            //orbitControls.reset();
+            orbitControls.target = player.model.position;
             cameraFollow = !cameraFollow;
             break;
     }
 });
 //#region Multiplayer
 
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
-  import { 
-    getAuth, 
-    signInWithPopup, 
-    GoogleAuthProvider, 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
+import {
+    getAuth,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut
-   } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
+} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
 
-   import { 
+import {
     getDatabase,
-    ref, 
-    onValue, 
+    ref,
+    onValue,
     set
- } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
+// Your web app's Firebase configuration
+const firebaseConfig = {
     apiKey: "AIzaSyCddIjH2EdQBJ8TKOhqeu3GKfYIe0L27zg",
     authDomain: "dinos-1ca44.firebaseapp.com",
     databaseURL: "https://dinos-1ca44-default-rtdb.firebaseio.com",
@@ -330,11 +247,11 @@ document.addEventListener('keyup', (event) => {
     storageBucket: "dinos-1ca44.appspot.com",
     messagingSenderId: "143087109647",
     appId: "1:143087109647:web:2703672e7544556a33c57a"
-  };
+};
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  // Initialize Firebase Authentication and get a reference to the service
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+// Initialize Firebase Authentication and get a reference to the service
 const auth = getAuth(app);
 auth.languageCode = 'es';
 const provider = new GoogleAuthProvider();
@@ -342,135 +259,151 @@ const db = getDatabase();
 
 const btnLogin = document.getElementById("btn-login");
 const btnLogout = document.getElementById("btn-out");
-async function login(){
+async function login() {
 
     const resp = await signInWithPopup(auth, provider)
-   .then((result) => {
-     // This gives you a Google Access Token. You can use it to access the Google API.
-     const credential = GoogleAuthProvider.credentialFromResult(result);
-     const token = credential.accessToken;
-     // The signed-in user info.
-     const user = result.user;
-     // IdP data available using getAdditionalUserInfo(result)
-     // ...
-     console.log(user);
-     let randomNum = Math.random();
-let equis = (randomNum * 1800) - 900;
-let randomNum2 = Math.random();
-let zeta = (randomNum2 * 1800) - 900;
-     writeUserData(user.uid, {x:equis, z:zeta});
-   }).catch((error) => {
-     // Handle Errors here.
-     const errorCode = error.code;
-     const errorMessage = error.message;
-     // The email of the user's account used.
-     const email = error.customData.email;
-     // The AuthCredential type that was used.
-     const credential = GoogleAuthProvider.credentialFromError(error);
-     // ...
-     console.log(errorMessage);
-   });
- }
- 
- async function logout(){
+        .then((result) => {
+            // This gives you a Google Access Token. You can use it to access the Google API.
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const token = credential.accessToken;
+            // The signed-in user info.
+            const user = result.user;
+            // IdP data available using getAdditionalUserInfo(result)
+            // ...
+            console.log(user);
+            let randomNum = Math.random();
+            let equis = (randomNum * 1800) - 900;
+            let randomNum2 = Math.random();
+            let zeta = (randomNum2 * 1800) - 900;
+            writeUserData(user.uid, { x: equis, z: zeta });
+        }).catch((error) => {
+            // Handle Errors here.
+            const errorCode = error.code;
+            const errorMessage = error.message;
+            // The email of the user's account used.
+            const email = error.customData.email;
+            // The AuthCredential type that was used.
+            const credential = GoogleAuthProvider.credentialFromError(error);
+            // ...
+            console.log(errorMessage);
+        });
+}
+
+async function logout() {
     const resp = await getAuth();
-signOut(auth).then(() => {
-    console.log('SALISTE');
-}).catch((error) => {
-    console.log('ERROR');
-});
- }
+    signOut(auth).then(() => {
+        console.log('SALISTE');
+    }).catch((error) => {
+        console.log('ERROR');
+    });
+}
 
-btnLogin.addEventListener("click", async () =>{
-const user = await login();
+btnLogin.addEventListener("click", async () => {
+    const user = await login();
 });
 
-btnLogout.addEventListener("click", async () =>{
+btnLogout.addEventListener("click", async () => {
     const user = await logout();
 });
 //recupera datos de la bdd
 const starCountRef = ref(db, 'jugadores');
 onValue(starCountRef, (snapshot) => {
-  const data = snapshot.val();
- 
-  Object.entries(data).forEach(([key, value]) => {
-    const jugador = scene.getObjectByName(key);
-    if (!jugador) {
-// Generar un número aleatorio entre 0 y 1
+    const data = snapshot.val();
 
-        const rexy = new Objeto(
-            scene,
-            physicsWorld,
-            `${assetsPath}modelos/Rexy/scene.gltf`,
-            new THREE.Vector3(10, 10, 10), // escala
-            new THREE.Vector3(value.x, 0, value.z), // posicion 
-            new THREE.Vector3(0, 0, 0) //rotacion
-        );
-    }
-   
-  });
+    Object.entries(data).forEach(([key, value]) => {
+        const jugador = scene.getObjectByName(key);
+        if (!jugador) {
+            // Generar un número aleatorio entre 0 y 1
+
+            /*
+            const rexy = new Objeto(
+                scene,
+                physicsWorld,
+                `${assetsPath}modelos/Rexy/scene.gltf`,
+                new THREE.Vector3(10, 10, 10), // escala
+                new THREE.Vector3(value.x, 0, value.z), // posicion 
+                new THREE.Vector3(0, 0, 0) //rotacion
+            );
+             */
+        }
+
+    });
 
 });
 //escribe datos en la bdd
 function writeUserData(userId, position) {
-    
-    set(ref(db, 'jugadores/'+ userId), {
-      x: position.x,
-      z: position.z,
+
+    set(ref(db, 'jugadores/' + userId), {
+        x: position.x,
+        z: position.z,
     });
-  }
+}
 
 //#endregion
 
-function followPlayer(carro) {
+function followPlayer() {
     let camPos = new THREE.Vector3(), camQuat = new THREE.Quaternion();
-    chaseCam.getWorldPosition(camPos);
+    player.chaseCam.getWorldPosition(camPos);
     camera.position.lerpVectors(camera.position, camPos, 0.1);
-    chaseCam.getWorldQuaternion(camQuat);
+    player.chaseCam.getWorldQuaternion(camQuat);
     camera.quaternion.slerp(camQuat, 0.1);
-
-    //camera.position.lerp(carro, 0.2);
-    //camera.position.set(carro.x, carro.y + 30, carro.z - 100);
-    //camera.lookAt(carro.x, carro.y + 20, carro.z);
-
 }
 
 
-function cargarModelos() {
-    //Objetos
-    //Carro
-    /*
-
-    */
+async function cargarModelos() {
+    //Huevos
+    huevos = [
+        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
+        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
+        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
+    ];
+    huevos.forEach((huevo) => {
+        let min = -1000;
+        let max = 1000;
+        let posicionX = (Math.random() * (max - min) + min).toFixed(4);
+        let posicionZ = (Math.random() * (max - min) + min).toFixed(4);
+        huevo.load(scene, { x: posicionX, y: 0, z: posicionZ }, { x: 0, y: 0, z: 0 }, { x: 2, y: 2, z: 2 });
+    });
 
     //Edificios
-    const labModel = new Objeto(
+    const laboratorio = await edificioCrear(`${assetsPath}modelos/Edificios/Lab.fbx`);
+    laboratorio.load(
         scene,
         physicsWorld,
-        `${assetsPath}modelos/Edificios/Lab.fbx`,
-        new THREE.Vector3(5, 5, 5),
-        new THREE.Vector3(-800, 0, 800), // posicion 
-        new THREE.Vector3(0, Math.PI / 2, 0) // rotacion
+        { x: -800, y: 0, z: 800 },
+        { x: 0, y: Math.PI / 2, z: 0 },
+        { x: 5, y: 5, z: 5 }
     );
 
-    const museo = new Objeto(
+    const museo = await edificioCrear(`${assetsPath}modelos/Edificios/Museo.fbx`);
+    museo.load(
         scene,
         physicsWorld,
-        `${assetsPath}modelos/Edificios/Museo.fbx`,
-        new THREE.Vector3(5, 5, 5),
-        new THREE.Vector3(800, 0, -600),
-        new THREE.Vector3(0, Math.PI / 90, 0)
+        { x: -800, y: 0, z: -600 },
+        { x: 0, y: Math.PI / 2, z: 0 },
+        { x: 5, y: 5, z: 5 }
     );
 
-    const cabin = new Objeto(
+    const cabin = await edificioCrear(`${assetsPath}modelos/Cabin.fbx`);
+    cabin.load(
         scene,
         physicsWorld,
-        `${assetsPath}modelos/Cabin.fbx`,
-        new THREE.Vector3(2, 2, 2),
-        new THREE.Vector3(-80, 0, -200),
-        new THREE.Vector3(0, Math.PI / 90, 0)
+        { x: -80, y: 0, z: -200 },
+        { x: 0, y: Math.PI / 90, z: 0 },
+        { x: 1, y: 1, z: 1 }
     );
 
+    //Dinosaurios
+    rexy = await dinosaurioCrear(`${assetsPath}modelos/Rexy/Rexy.gltf`);
+    rexy.load(
+        scene,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        { x: 5, y: 5, z: 5 }
+    );
+    rexy.loadAnimations();
+    /*
+ 
     //Traps
     const trampa = new Objeto(
         scene,
@@ -480,29 +413,7 @@ function cargarModelos() {
         new THREE.Vector3(800, 0, 800),
         new THREE.Vector3(0, Math.PI / 90, 0)
     );
-
-    //Cantidad de Huevos de Dinosaurio
-    const huevos = new Array(10);
-
-    //Huevo
-    const huevo = new Objeto(
-        scene,
-        physicsWorld,
-        `${assetsPath}modelos/Huevo.fbx`,
-        new THREE.Vector3(5, 5, 5),
-        new THREE.Vector3(-800, 0, -800),
-        new THREE.Vector3(0, 0, 0)
-    );
-
-    //T-Rex
-    const rexy = new Objeto(
-        scene,
-        physicsWorld,
-        `${assetsPath}modelos/Rexy/scene.gltf`,
-        new THREE.Vector3(22, 22, 22),
-        new THREE.Vector3(30, 0, -20),
-        new THREE.Vector3(0, 0, 0)
-    );
+    */
 }
 
 function setupTerreno() {
@@ -636,20 +547,17 @@ function setupCannon() {
 
 
 
-    //Prepara una Esfera
-    const radius = 100;
-    sphereBody = new CANNON.Body({
-        mass: 1,
-        shape: new CANNON.Sphere(radius)
-    });
-    sphereBody.position.set(0, 1000, 0);
-    physicsWorld.addBody(sphereBody);
-
-    const esferaGeometry = new THREE.SphereGeometry(radius);
-    const esferaMaterial = new THREE.MeshNormalMaterial();
-    esfera = new THREE.Mesh(esferaGeometry, esferaMaterial);
-    scene.add(esfera);
-
     //CANNON DEBUGGER
     cannonDebugger = new CannonDebugger(scene, physicsWorld);
+}
+
+function updateProgress(progress) {
+    console.log(`${progress * 100}%`);
+    //const progressBar = document.getElementById('progressBar'); // get the progress bar element
+    //progressBar.style.width = `${progress * 100}%`; // set the width of the progress bar based on the loading progress
+    if (progress === 1) { // check if all assets are loaded
+        console.log(`${progress * 100}%`);
+        //document.getElementById('loadingScreen').style.display = 'none'; // hide the loading screen
+        // display the game or start the game loop
+    }
 }

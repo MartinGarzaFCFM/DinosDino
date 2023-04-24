@@ -125,7 +125,6 @@ function animate() {
             huevo.boundingBox.makeEmpty();
         }
     });
-aaa
     player.update();
 
     requestAnimationFrame(function () { animate(); });

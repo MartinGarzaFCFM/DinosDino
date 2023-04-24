@@ -9,7 +9,6 @@ class Carro extends Objeto {
         this.chaseCam = new THREE.Object3D();
         this.cannonBody;
         this.control;
-        this.positionMesh = new THREE.Mesh();
     }
     load(scene, physicsWorld, posicion, rotacion, wheelMaterial) {
         this.model = this.model.scene;
@@ -50,7 +49,10 @@ class Carro extends Objeto {
 
         //Physics
         const chassisShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
-        this.cannonBody = new CANNON.Body({ mass: 400 });
+        this.cannonBody = new CANNON.Body({
+            mass: 400,
+
+        });
         const chassisRotation = new CANNON.Quaternion();
         chassisRotation.setFromEuler(0, -Math.PI / 2, 0);
         this.cannonBody.addShape(chassisShape);
@@ -64,7 +66,7 @@ class Carro extends Objeto {
             directionLocal: new CANNON.Vec3(0, -1, 0),
             suspensionStiffness: 30,
             suspensionRestLength: 0.3,
-            frictionSlip: 3,
+            frictionSlip: 30,
             dampingRelaxation: 2.3,
             dampingCompression: 5.4,
             maxSuspensionForce: 10000,
@@ -79,9 +81,6 @@ class Carro extends Objeto {
         //Crear Vehiculo
         this.control = new CANNON.RaycastVehicle({
             chassisBody: this.cannonBody,
-            //indexRightAxis: 0,
-            //indexForwardAxis: 1,
-            //indexUpAxis: 2
         });
 
         options.chassisConnectionPointLocal.set(-size.x / 2, -size.y / 2, size.z / 2);
@@ -93,7 +92,7 @@ class Carro extends Objeto {
         options.chassisConnectionPointLocal.set(size.x / 2, -size.y / 2, -size.z / 2);
         this.control.addWheel(options);
 
-        this.control.addToWorld(physicsWorld);        
+        this.control.addToWorld(physicsWorld);
 
         const wheelBodies = []
         this.control.wheelInfos.forEach((wheel) => {
@@ -121,10 +120,14 @@ class Carro extends Objeto {
                 wheelBody.quaternion.copy(transform.quaternion)
             }
         });
+    }
 
-        //Nombrar positionMesh
-        this.positionMesh.name = "player";
-        this.model.add(this.positionMesh);
+    update() {
+        this.model.position.copy(this.cannonBody.position);
+        this.model.position.y -= 5.0
+        this.model.quaternion.copy(this.cannonBody.quaternion);
+
+        this.boundingBox.setFromObject(this.model);
     }
 }
 

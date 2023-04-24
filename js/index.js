@@ -111,18 +111,12 @@ function animate() {
     //Reloj aplicado para animaciones
     rexy.mixer.update(clock.getDelta());
 
-    rexy.perseguir();
+    rexy.perseguir(player);
 
     if (cameraFollow) followPlayer();
 
     orbitControls.target.copy(player.model.position);
     orbitControls.update();
-
-    player.model.position.copy(player.cannonBody.position);
-    player.model.position.y -= 5.0
-    player.model.quaternion.copy(player.cannonBody.quaternion);
-
-    player.boundingBox.setFromObject(player.model);
 
     huevos.forEach((huevo) => {
         huevo.collect(player.boundingBox);
@@ -131,7 +125,8 @@ function animate() {
             huevo.boundingBox.makeEmpty();
         }
     });
-
+aaa
+    player.update();
 
     requestAnimationFrame(function () { animate(); });
     renderer.render(scene, camera);
@@ -139,8 +134,8 @@ function animate() {
 
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;
-    const maxForce = 3500;
-    const brakeForce = 400;
+    const maxForce = 5000;
+    const brakeForce = 200;
 
     switch (event.key) {
         case 'w':
@@ -399,7 +394,7 @@ async function cargarModelos() {
         scene,
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
-        { x: 5, y: 5, z: 5 }
+        { x: 2, y: 2, z: 2 }
     );
     rexy.loadAnimations();
     /*

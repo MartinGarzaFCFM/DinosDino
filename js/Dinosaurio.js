@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as CANNON from "cannon-es";
 import { Objeto } from "./Objeto";
 import { modelLoader } from "./loaders/modelLoader";
 
@@ -7,17 +8,10 @@ class Dinosaurio extends Objeto {
         super();
         this.mixer;
         this.action;
-        this.raycaster = new THREE.Raycaster();
-        this.search = [];
-        this.lag = 1;
-        this.positionMesh = new THREE.Mesh();
+        this.boundingBoxCustomSize = new THREE.Vector3(80, 80, 80);
+        this.lastAtk;
     }
     load(scene, posicion, rotacion, escala) {
-        for (let i = 0; i < 180; i += 3) {
-            this.search[i] = new THREE.Vector3(Math.cos(i), 0, Math.sin(i));
-        }
-
-
         this.model.scene.position.set(posicion.x, posicion.y, posicion.z);
         this.model.scene.rotation.set(rotacion.x, rotacion.y, rotacion.z);
         this.model.scene.scale.set(escala.x, escala.y, escala.z);
@@ -31,7 +25,7 @@ class Dinosaurio extends Objeto {
         scene.add(this.model.scene);
 
         //Bounding Box
-        this.boundingBox = new THREE.Box3().setFromObject(this.model.scene);
+        this.boundingBox = new THREE.Box3().setFromCenterAndSize(this.model.scene.position, this.boundingBoxCustomSize);
         this.boundingBoxHelper = new THREE.Box3Helper(this.boundingBox, 0xffff00);
 
         //Actualizar el Bounding Box
@@ -48,8 +42,42 @@ class Dinosaurio extends Objeto {
         const clip = THREE.AnimationClip.findByName(clips, "Bip001|Take 001|BaseLayer");
         this.action = this.mixer.clipAction(clip);
     }
-    perseguir() {
+    perseguir(player) {
         this.action.play();
+
+        this.model.scene.lookAt(player.model.position)
+
+        const distancia = this.model.scene.position.distanceTo(player.model.position);
+        let subvec = new THREE.Vector3();
+        subvec = subvec.subVectors(player.model.position, this.model.scene.position);
+
+        if (distancia < 1000) {
+            this.model.scene.position.x += .001 * 400 * (subvec.x / distancia);
+            this.model.scene.position.y += .001 * 400 * (subvec.y / distancia);
+            this.model.scene.position.z += .001 * 400 * (subvec.z / distancia);
+            this.ataca(player);
+        }
+
+
+        this.update();
+    }
+
+    ataca(player) {
+        if (this.boundingBox.containsBox(player.boundingBox)) {
+            let now = Date.now();
+            if(now - this.lastAtk < 1000){
+                return
+            }
+            else{
+                console.log("HIT");
+                player.cannonBody.applyImpulse(new CANNON.Vec3(-50000));
+                this.lastAtk = Date.now();
+            }
+        }
+    }
+
+    update() {
+        this.boundingBox.setFromCenterAndSize(this.model.scene.position, this.boundingBoxCustomSize);
     }
 }
 

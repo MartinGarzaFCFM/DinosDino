@@ -6,6 +6,7 @@ import { huevoCrear } from "./Huevo.js";
 import { carroCrear } from "./Carro.js";
 import { dinosaurioCrear } from "./Dinosaurio.js";
 import { edificioCrear } from "./Edificio.js";
+import { Firebase } from './Firebase.js';
 
 //PATHS
 const assetsPath = "../assets/";
@@ -14,7 +15,7 @@ const assetsPath = "../assets/";
 let textureLoader;
 
 //Scene
-let scene;
+var scene;
 
 //Reloj para las animaciones
 const clock = new THREE.Clock();
@@ -33,7 +34,7 @@ let wheelMaterial;
 let cameraPosition;
 let camera;
 //Permitir que siga al jugador
-let cameraFollow = true;
+let cameraFollow = false;
 
 let chaseCam = new THREE.Object3D();
 let chaseCamPivot = new THREE.Object3D();
@@ -55,16 +56,39 @@ let skydomeSize;
 let orbitControls;
 
 //Jugador
-const player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
+var foundGame;
+var otrosJugadores = [];
+var otrasPosiciones = [];
+var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
+
 
 //Dinosaurios
 var rexy;
 
 var huevos;
 
+//Firebase
+const firebase = new Firebase();
+
 
 init();
 async function init() {
+    //Funciones a Botones en HTML
+    //TODO
+    const btnLogin = document.getElementById("btn-login");
+    const btnLogout = document.getElementById("btn-out");
+
+    btnLogin.addEventListener("click", async () => {
+        const user = await firebase.login();
+        console.log(firebase.user);
+    });
+
+    btnLogout.addEventListener("click", async () => {
+        const user = await firebase.logout();
+        console.log(firebase.user);
+    });
+
+
     //Scene
     const backgroundColor = new THREE.Color("#34495E");
     scene = new THREE.Scene();
@@ -82,6 +106,8 @@ async function init() {
     setupSkyDome();
     setupTerreno();
 
+    await firebase.findGame();
+
     await cargarModelos();
     //Orbit
     orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -91,8 +117,68 @@ async function init() {
     orbitControls.minDistance = 10;
     orbitControls.maxDistance = 500;
     orbitControls.enablePan = false
-    orbitControls.enabled = false;
+    orbitControls.enabled = true;
 
+    //firebase.readAllPlayers();
+
+    /*
+    firebase.game.forEach(jugador => {
+        let uid = Object.keys(jugador);
+        let playerInstance = player;
+        playerInstance.ID = uid;
+        others.push(playerInstance);
+        //other.load(scene, physicsWorld, {x: jugador.x, y: 0, z: jugador.z}, {x: jugador.rotx, y: jugador.roty, z: jugador.rotz}, wheelMaterial);
+    });
+    */
+
+
+    console.log(others);
+
+    animate();
+}
+
+function animate() {
+    physicsWorld.fixedStep();
+    cannonDebugger.update();
+
+    if (cameraFollow) followPlayer();
+
+    if (firebase.user != null) {
+        playerStart();
+        player.update();
+        firebase.writeUserData({ x: player.model.position.x, z: player.model.position.z }, { x: player.model.rotation.x, y: player.model.rotation.y, z: player.model.rotation.z, })
+    }
+
+
+
+    //rexy.perseguir(player);
+    //player.update();
+
+    //huevos.forEach((huevo) => {
+    //    huevo.collect(player.boundingBox);
+    //    if (huevo.collected) {
+    //        scene.remove(huevo.model);
+    //        huevo.boundingBox.makeEmpty();
+    //    }
+    //});
+
+
+
+
+    //Reloj aplicado para animaciones
+    rexy.mixer.update(clock.getDelta());
+
+    requestAnimationFrame(function () { animate(); });
+    renderer.render(scene, camera);
+}
+
+function updateOtherPlayers() {
+
+}
+
+function playerStart() {
+    if (player.isON) return;
+    player.isON = true;
     //Player
     player.load(
         scene,
@@ -101,35 +187,20 @@ async function init() {
         { x: 0, y: 0, z: 0 },
         wheelMaterial
     );
-    animate();
-}
-
-function animate() {
-    physicsWorld.fixedStep();
-    cannonDebugger.update();
-
-    //Reloj aplicado para animaciones
-    rexy.mixer.update(clock.getDelta());
-
-    rexy.perseguir(player);
-
-    if (cameraFollow) followPlayer();
+    cameraFollow = !cameraFollow;
 
     orbitControls.target.copy(player.model.position);
     orbitControls.update();
+}
 
-    huevos.forEach((huevo) => {
-        huevo.collect(player.boundingBox);
-        if (huevo.collected) {
-            scene.remove(huevo.model);
-            huevo.boundingBox.makeEmpty();
-        }
+function showPlayers() {
+    firebase.readAllPlayers();
+    firebase.players.forEach(function (play) {
+        let otro = player;
+        otro.ID = play.uid
+        others.push(player);
+        player.load(scene, physicsWorld, { x: player.x, y: 0, z: player.z }, { x: player.rotx, y: player.roty, z: player.rotz }, wheelMaterial);
     });
-aaa
-    player.update();
-
-    requestAnimationFrame(function () { animate(); });
-    renderer.render(scene, camera);
 }
 
 document.addEventListener('keydown', (event) => {
@@ -214,127 +285,6 @@ document.addEventListener('keyup', (event) => {
             break;
     }
 });
-//#region Multiplayer
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
-import {
-    getAuth,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signOut
-} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
-
-import {
-    getDatabase,
-    ref,
-    onValue,
-    set
-} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyCddIjH2EdQBJ8TKOhqeu3GKfYIe0L27zg",
-    authDomain: "dinos-1ca44.firebaseapp.com",
-    databaseURL: "https://dinos-1ca44-default-rtdb.firebaseio.com",
-    projectId: "dinos-1ca44",
-    storageBucket: "dinos-1ca44.appspot.com",
-    messagingSenderId: "143087109647",
-    appId: "1:143087109647:web:2703672e7544556a33c57a"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// Initialize Firebase Authentication and get a reference to the service
-const auth = getAuth(app);
-auth.languageCode = 'es';
-const provider = new GoogleAuthProvider();
-const db = getDatabase();
-
-const btnLogin = document.getElementById("btn-login");
-const btnLogout = document.getElementById("btn-out");
-async function login() {
-
-    const resp = await signInWithPopup(auth, provider)
-        .then((result) => {
-            // This gives you a Google Access Token. You can use it to access the Google API.
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            const token = credential.accessToken;
-            // The signed-in user info.
-            const user = result.user;
-            // IdP data available using getAdditionalUserInfo(result)
-            // ...
-            console.log(user);
-            let randomNum = Math.random();
-            let equis = (randomNum * 1800) - 900;
-            let randomNum2 = Math.random();
-            let zeta = (randomNum2 * 1800) - 900;
-            writeUserData(user.uid, { x: equis, z: zeta });
-        }).catch((error) => {
-            // Handle Errors here.
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            // The email of the user's account used.
-            const email = error.customData.email;
-            // The AuthCredential type that was used.
-            const credential = GoogleAuthProvider.credentialFromError(error);
-            // ...
-            console.log(errorMessage);
-        });
-}
-
-async function logout() {
-    const resp = await getAuth();
-    signOut(auth).then(() => {
-        console.log('SALISTE');
-    }).catch((error) => {
-        console.log('ERROR');
-    });
-}
-
-btnLogin.addEventListener("click", async () => {
-    const user = await login();
-});
-
-btnLogout.addEventListener("click", async () => {
-    const user = await logout();
-});
-//recupera datos de la bdd
-const starCountRef = ref(db, 'jugadores');
-onValue(starCountRef, (snapshot) => {
-    const data = snapshot.val();
-
-    Object.entries(data).forEach(([key, value]) => {
-        const jugador = scene.getObjectByName(key);
-        if (!jugador) {
-            // Generar un número aleatorio entre 0 y 1
-
-            /*
-            const rexy = new Objeto(
-                scene,
-                physicsWorld,
-                `${assetsPath}modelos/Rexy/scene.gltf`,
-                new THREE.Vector3(10, 10, 10), // escala
-                new THREE.Vector3(value.x, 0, value.z), // posicion 
-                new THREE.Vector3(0, 0, 0) //rotacion
-            );
-             */
-        }
-
-    });
-
-});
-//escribe datos en la bdd
-function writeUserData(userId, position) {
-
-    set(ref(db, 'jugadores/' + userId), {
-        x: position.x,
-        z: position.z,
-    });
-}
-
-//#endregion
 
 function followPlayer() {
     let camPos = new THREE.Vector3(), camQuat = new THREE.Quaternion();
@@ -346,6 +296,15 @@ function followPlayer() {
 
 
 async function cargarModelos() {
+    //Jugadores
+    if (firebase.game != null) {
+        Object.keys(firebase.game).forEach(key => {
+            let playerInst = player;
+            playerInst.ID = key;
+            otrosJugadores.push(playerInst);
+        })
+    }
+
     //Huevos
     huevos = [
         await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),

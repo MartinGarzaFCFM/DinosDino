@@ -9,6 +9,8 @@ class Carro extends Objeto {
         this.chaseCam = new THREE.Object3D();
         this.cannonBody;
         this.control;
+        this.isON = false;
+        this.ID = null;
     }
     load(scene, physicsWorld, posicion, rotacion, wheelMaterial) {
         this.model = this.model.scene;
@@ -126,6 +128,14 @@ class Carro extends Objeto {
         this.model.position.copy(this.cannonBody.position);
         this.model.position.y -= 5.0
         this.model.quaternion.copy(this.cannonBody.quaternion);
+
+        this.boundingBox.setFromObject(this.model);
+    }
+
+    updateWithFirebase(posiciones, rotaciones){
+        this.model.position.set(posiciones.x, posiciones.y, posiciones.z);
+        this.model.position.y -= 5.0;
+        this.model.rotation.set(rotaciones.x, rotaciones.y, rotaciones.z);
 
         this.boundingBox.setFromObject(this.model);
     }

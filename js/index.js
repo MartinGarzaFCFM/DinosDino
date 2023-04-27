@@ -6,8 +6,9 @@ import { huevoCrear } from "./Huevo.js";
 import { carroCrear } from "./Carro.js";
 import { dinosaurioCrear } from "./Dinosaurio.js";
 import { edificioCrear } from "./Edificio.js";
-import { Firebase } from './Firebase.js';
 import { modelLoader } from './loaders/modelLoader.js';
+
+import * as firebase from "./Firebase.js";
 
 //PATHS
 const assetsPath = "../assets/";
@@ -71,7 +72,7 @@ var rexy;
 var huevos;
 
 //Firebase
-const firebase = new Firebase();
+firebase.init();
 
 //Funciones a Botones en HTML
 //TODO
@@ -82,22 +83,15 @@ const btnJoinGame = document.getElementById("btn-joinGame");
 
 init();
 async function init() {
-
-
-    btnLogin.addEventListener("click", async () => {
-        const user = await firebase.login();
-        //console.log(firebase.user);
+    btnLogin.addEventListener("click", () => {
+        firebase.login();
     });
-
     btnLogout.addEventListener("click", async () => {
-        const user = await firebase.logout();
-        //console.log(firebase.user);
+        firebase.logout();
     });
-
     btnCreateGame.addEventListener("click", async () => {
         firebase.createGame();
     });
-
     btnJoinGame.addEventListener("click", async () => {
 
     });
@@ -121,6 +115,7 @@ async function init() {
     setupTerreno();
 
     await cargarModelos();
+
     //Orbit
     orbitControls = new OrbitControls(camera, renderer.domElement);
     orbitControls.rotateSpeed = 1.0;
@@ -131,42 +126,6 @@ async function init() {
     orbitControls.enablePan = false
     orbitControls.enabled = true;
 
-    /*
-    
-    firebase.allPlayersRef.on("value", (snapshot) => {
-        this.players = snapshot.val() || {};
-        Object.keys(this.players).forEach((key) => {
-            const playerState = this.players[key];
-            scene.remove(playerState.model);
-
-            let el = playerElements[key];
-        });
-    });
-    firebase.auth.onAuthStateChanged((user) => {
-        console.log(user);
-        if (user) {
-            //Inicio de sesion
-            firebase.playerID = user.uid;
-            firebase.playerRef = ref(firebase.db, 'jugadores/' + firebase.playerID);
- 
-            firebase.playerRef.set({
-                id: firebase.playerID,
-                model: carroModel,
-                posX: -650,
-                posY: 10,
-                posZ: 800,
-                rotX: 0,
-                rotY: 0,
-                rotZ: 0
-            });
- 
-            firebase.playerRef.onDisconnect().remove();
-        }
-    });
-    */
-
-
-
     animate();
 }
 
@@ -176,7 +135,7 @@ function animate() {
 
     if (cameraFollow) followPlayer();
 
-    if (firebase.user != null) {
+    if (firebase.usuarioConectado != null) {
         btnCreateGame.style.display = "block";
         btnJoinGame.style.display = "block";
     }
@@ -210,36 +169,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-function updateOtherPlayers() {
 
-}
-
-function playerStart() {
-    if (player.isON) return;
-    player.isON = true;
-    //Player
-    player.load(
-        scene,
-        physicsWorld,
-        { x: -650, y: 10, z: 800 },
-        { x: 0, y: 0, z: 0 },
-        wheelMaterial
-    );
-    cameraFollow = !cameraFollow;
-
-    orbitControls.target.copy(player.model.position);
-    orbitControls.update();
-}
-
-function showPlayers() {
-    firebase.readAllPlayers();
-    firebase.players.forEach(function (play) {
-        let otro = player;
-        otro.ID = play.uid
-        others.push(player);
-        player.load(scene, physicsWorld, { x: player.x, y: 0, z: player.z }, { x: player.rotx, y: player.roty, z: player.rotz }, wheelMaterial);
-    });
-}
 
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;

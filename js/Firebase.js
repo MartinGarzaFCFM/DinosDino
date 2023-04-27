@@ -1,22 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
-import {
-    getAuth,
-    onAuthStateChanged,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signOut
-} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-auth.js"
-
-import {
-    getDatabase,
-    ref,
-    onValue,
-    set,
-    onDisconnect,
-    onChildAdded,
-    onChildChanged,
-    onChildRemoved
-} from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, set, onChildAdded, onChildChanged, child, get } from "firebase/database";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -29,103 +13,121 @@ const firebaseConfig = {
     appId: "1:143087109647:web:2703672e7544556a33c57a"
 };
 
-class Firebase {
-    constructor() {
-        // Initialize Firebase
-        this.app = initializeApp(firebaseConfig);
-        // Initialize Firebase Authentication and get a reference to the service
-        this.auth = getAuth(this.app);
-        this.auth.languageCode = 'es';
-        this.provider = new GoogleAuthProvider();
-        this.db = getDatabase();
+//Variables de Inicio
+var app;
+var auth;
+var provider;
+var db;
 
-        //Referencias a las Bases
-        this.usuariosRef = ref(this.db, "Usuarios/");
-        this.juegoRef = ref(this.db, "Juego/");
+//Referencias a las Bases
+var usuariosRef;
+var userUID;
+var partidaRef;
 
-        //Datos propios de la Instancia
-        this.user = null;
+//Datos
+export var usuarioConectado = null;
+export var usuarios = [];
 
-        this.auth.onAuthStateChanged((user) => {
-            this.user = user;
-            console.log(user);
-        });
+function init() {
+    app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    auth = getAuth(app);
+    auth.languageCode = 'es';
+    provider = new GoogleAuthProvider();
 
-        onChildAdded(this.juegoRef, (data) => {
-            console.log(data);
-        });
-
-        onChildRemoved(this.juegoRef, (data) => {
-            console.log(data);
-        });
-
-
-    }
-
-    async login() {
-        const resp = await signInWithPopup(this.auth, this.provider)
-            .then((result) => {
-                // This gives you a Google Access Token. You can use it to access the Google API.
-                //const credential = GoogleAuthProvider.credentialFromResult(result);
-                //const token = credential.accessToken;
-                // The signed-in user info.
-                console.log(result.user);
-
-                set(ref(this));
-
-                set(this.usuariosRef + result.user.uid + "/", {
-                    connected: true
-                });
-
-                // IdP data available using getAdditionalUserInfo(result)
-            }).catch((error) => {
-                // Handle Errors here.
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                // The email of the user's account used.
-                //const email = error.customData.email;
-                // The AuthCredential type that was used.
-                //const credential = GoogleAuthProvider.credentialFromError(error);
-                console.log(errorCode + errorMessage);
-            });
-    }
-
-    async logout() {
-        signOut(this.auth).then(() => {
-            set(this.usuariosRef + this.user.uid + "/", {
-                connected: false
-            });
-            this.user = null;
-            console.log('SALISTE');
-        }).catch((error) => {
-            console.log('ERROR' + error);
-        });
-    }
-
-    async createGame() {
-        set(this.juegoRef + "/" + this.user);
-    }
-
-    //Leer Datos de la BD
-    readAllPlayers() {
-        const players = ref(this.db, 'partida/jugadores');
-        var playersArray = [];
-        onValue(players, (snapshot) => {
-            playersArray.push(snapshot.val());
-        });
-        this.players = playersArray;
-    }
-
-    //escribe datos en la bdd
-    writeUserData(position, rotation) {
-        set(ref(this.db, 'partida/jugadores/' + this.user.uid), {
-            x: position.x,
-            z: position.z,
-            rotx: rotation.x,
-            roty: rotation.y,
-            rotz: rotation.z
-        });
-    }
+    prepareRefs();
+    prepareEvents();
+    lookForGame();
 }
 
-export { Firebase };
+function prepareRefs(){
+    usuariosRef = ref(db, "Usuarios/")
+}
+
+function lookForGame(){
+    const dbRef = ref(getDatabase());
+    get(child(dbRef, "Juego/")).then((snapshot) => {
+        if(snapshot.exists() && snapshot.val() !== ""){
+            console.log("Hay un juego en curso");
+            partidaRef = ref(db, "Juego/");
+        } else {
+            console.log("No hay juegos abiertos");
+        }
+    }).catch((error) => {
+        console.error(error);
+    });
+}
+
+function prepareEvents() {
+    onChildAdded(usuariosRef, (data) =>{
+        userUID = data.key;
+    });
+    onChildChanged(usuariosRef, (data) =>{
+        userUID = data.key;
+    });
+}
+
+function login() {
+    signInWithPopup(auth, provider)
+        .then((result) => {
+            console.log(result.user);
+
+            set(ref(db, "Usuarios/" + result.user.uid), {
+                connected: true
+            });
+
+        }).catch((error) => {
+            const errorCode = error.code;
+            const errorMessage = error.message;
+            console.log(errorCode + " " + errorMessage);
+        });
+}
+
+function logout() {
+    signOut(auth).then(() => {
+        set(ref(db, "Usuarios/" + userUID), {
+            connected: false
+        });
+    }).catch((error) => {
+        console.log('ERROR ' + error);
+    });
+}
+
+function createGame() {
+    set(ref(db, "Juego/"));
+    set(ref(db, "Juego/" + userUID), {
+        posX: Math.floor((Math.random() * 800) - 800),
+        posZ: Math.floor((Math.random() * 800) - 800),
+        rotX: 0,
+        rotY: 0,
+        rotZ: 0
+    });
+
+    partidaRef = ref(db, "Juego/");
+}
+
+function joinGame(){
+
+}
+
+//escribe datos en la bdd
+function writeUserData(position, rotation) {
+    set(ref(this.db, 'partida/jugadores/' + this.user.uid), {
+        x: position.x,
+        z: position.z,
+        rotx: rotation.x,
+        roty: rotation.y,
+        rotz: rotation.z
+    });
+}
+
+export { 
+    init,
+    prepareRefs,
+    prepareEvents,
+    login,
+    logout,
+    createGame,
+    joinGame,
+    writeUserData
+}

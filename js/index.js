@@ -7,6 +7,7 @@ import { carroCrear } from "./Carro.js";
 import { dinosaurioCrear } from "./Dinosaurio.js";
 import { edificioCrear } from "./Edificio.js";
 import { Firebase } from './Firebase.js';
+import { modelLoader } from './loaders/modelLoader.js';
 
 //PATHS
 const assetsPath = "../assets/";
@@ -59,7 +60,9 @@ let orbitControls;
 var foundGame;
 var otrosJugadores = [];
 var otrasPosiciones = [];
+
 var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
+var carroModel = await modelLoader(`${assetsPath}modelos/Carro/carro.gltf`);
 
 
 //Dinosaurios
@@ -70,22 +73,33 @@ var huevos;
 //Firebase
 const firebase = new Firebase();
 
+//Funciones a Botones en HTML
+//TODO
+const btnLogin = document.getElementById("btn-login");
+const btnLogout = document.getElementById("btn-out");
+const btnCreateGame = document.getElementById("btn-createGame");
+const btnJoinGame = document.getElementById("btn-joinGame");
 
 init();
 async function init() {
-    //Funciones a Botones en HTML
-    //TODO
-    const btnLogin = document.getElementById("btn-login");
-    const btnLogout = document.getElementById("btn-out");
+
 
     btnLogin.addEventListener("click", async () => {
         const user = await firebase.login();
-        console.log(firebase.user);
+        //console.log(firebase.user);
     });
 
     btnLogout.addEventListener("click", async () => {
         const user = await firebase.logout();
-        console.log(firebase.user);
+        //console.log(firebase.user);
+    });
+
+    btnCreateGame.addEventListener("click", async () => {
+        firebase.createGame();
+    });
+
+    btnJoinGame.addEventListener("click", async () => {
+
     });
 
 
@@ -106,8 +120,6 @@ async function init() {
     setupSkyDome();
     setupTerreno();
 
-    await firebase.findGame();
-
     await cargarModelos();
     //Orbit
     orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -119,20 +131,41 @@ async function init() {
     orbitControls.enablePan = false
     orbitControls.enabled = true;
 
-    //firebase.readAllPlayers();
-
     /*
-    firebase.game.forEach(jugador => {
-        let uid = Object.keys(jugador);
-        let playerInstance = player;
-        playerInstance.ID = uid;
-        others.push(playerInstance);
-        //other.load(scene, physicsWorld, {x: jugador.x, y: 0, z: jugador.z}, {x: jugador.rotx, y: jugador.roty, z: jugador.rotz}, wheelMaterial);
+    
+    firebase.allPlayersRef.on("value", (snapshot) => {
+        this.players = snapshot.val() || {};
+        Object.keys(this.players).forEach((key) => {
+            const playerState = this.players[key];
+            scene.remove(playerState.model);
+
+            let el = playerElements[key];
+        });
+    });
+    firebase.auth.onAuthStateChanged((user) => {
+        console.log(user);
+        if (user) {
+            //Inicio de sesion
+            firebase.playerID = user.uid;
+            firebase.playerRef = ref(firebase.db, 'jugadores/' + firebase.playerID);
+ 
+            firebase.playerRef.set({
+                id: firebase.playerID,
+                model: carroModel,
+                posX: -650,
+                posY: 10,
+                posZ: 800,
+                rotX: 0,
+                rotY: 0,
+                rotZ: 0
+            });
+ 
+            firebase.playerRef.onDisconnect().remove();
+        }
     });
     */
 
 
-    console.log(others);
 
     animate();
 }
@@ -144,10 +177,15 @@ function animate() {
     if (cameraFollow) followPlayer();
 
     if (firebase.user != null) {
-        playerStart();
-        player.update();
-        firebase.writeUserData({ x: player.model.position.x, z: player.model.position.z }, { x: player.model.rotation.x, y: player.model.rotation.y, z: player.model.rotation.z, })
+        btnCreateGame.style.display = "block";
+        btnJoinGame.style.display = "block";
     }
+    else {
+        btnCreateGame.style.display = "none";
+        btnJoinGame.style.display = "none";
+    }
+
+
 
 
 

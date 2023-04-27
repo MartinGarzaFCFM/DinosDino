@@ -3,7 +3,7 @@ import * as CANNON from "cannon-es";
 import { Objeto } from "./Objeto";
 import { modelLoader } from "./loaders/modelLoader.js";
 
-class Carro extends Objeto {
+export class Carro extends Objeto {
     constructor() {
         super();
         this.chaseCam = new THREE.Object3D();

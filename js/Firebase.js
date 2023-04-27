@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-app.js"
 import {
     getAuth,
+    onAuthStateChanged,
     signInWithPopup,
     GoogleAuthProvider,
     signOut
@@ -10,7 +11,11 @@ import {
     getDatabase,
     ref,
     onValue,
-    set
+    set,
+    onDisconnect,
+    onChildAdded,
+    onChildChanged,
+    onChildRemoved
 } from "https://www.gstatic.com/firebasejs/9.19.0/firebase-database.js"
 
 // Your web app's Firebase configuration
@@ -34,53 +39,71 @@ class Firebase {
         this.provider = new GoogleAuthProvider();
         this.db = getDatabase();
 
+        //Referencias a las Bases
+        this.usuariosRef = ref(this.db, "Usuarios/");
+        this.juegoRef = ref(this.db, "Juego/");
+
+        //Datos propios de la Instancia
         this.user = null;
-        this.game = null;
-        this.players = [];
+
+        this.auth.onAuthStateChanged((user) => {
+            this.user = user;
+            console.log(user);
+        });
+
+        onChildAdded(this.juegoRef, (data) => {
+            console.log(data);
+        });
+
+        onChildRemoved(this.juegoRef, (data) => {
+            console.log(data);
+        });
+
+
     }
 
     async login() {
         const resp = await signInWithPopup(this.auth, this.provider)
             .then((result) => {
                 // This gives you a Google Access Token. You can use it to access the Google API.
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                const token = credential.accessToken;
+                //const credential = GoogleAuthProvider.credentialFromResult(result);
+                //const token = credential.accessToken;
                 // The signed-in user info.
-                this.user = result.user;
+                console.log(result.user);
+
+                set(ref(this));
+
+                set(this.usuariosRef + result.user.uid + "/", {
+                    connected: true
+                });
+
                 // IdP data available using getAdditionalUserInfo(result)
-                //this.createGame();
             }).catch((error) => {
-                console.log(error);
+                // Handle Errors here.
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                // The email of the user's account used.
+                //const email = error.customData.email;
+                // The AuthCredential type that was used.
+                //const credential = GoogleAuthProvider.credentialFromError(error);
+                console.log(errorCode + errorMessage);
             });
     }
 
     async logout() {
-        const resp = await getAuth();
-
         signOut(this.auth).then(() => {
+            set(this.usuariosRef + this.user.uid + "/", {
+                connected: false
+            });
+            this.user = null;
             console.log('SALISTE');
         }).catch((error) => {
-            console.log('ERROR');
+            console.log('ERROR' + error);
         });
     }
 
-    createGame() {
-        set(ref(this.db, "partida"), {
-        });
-    }
-
-    //Buscar si hay un juego
-    async findGame() {
-        const partida = ref(this.db, "partida/jugadores");
-        onValue(partida, (snapshot) => {
-            if(snapshot.val() != null){
-                this.game = snapshot.val();
-                return true;
-            }
-            else{
-                return false;
-            }
-        });
+    async createGame() {
+        set(this.juegoRef + "/" + this.user);
     }
 
     //Leer Datos de la BD

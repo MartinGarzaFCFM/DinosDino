@@ -58,12 +58,9 @@ let skydomeSize;
 let orbitControls;
 
 //Jugador
-var foundGame;
 var otrosJugadores = [];
-var otrasPosiciones = [];
 
 var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
-var carroModel = await modelLoader(`${assetsPath}modelos/Carro/carro.gltf`);
 
 
 //Dinosaurios
@@ -80,9 +77,17 @@ const btnLogin = document.getElementById("btn-login");
 const btnLogout = document.getElementById("btn-out");
 const btnCreateGame = document.getElementById("btn-createGame");
 const btnJoinGame = document.getElementById("btn-joinGame");
+const btnLeaveGame = document.getElementById("btn-leaveGame");
+const btnStartGame = document.getElementById("btn-startGame");
+
+const selectPartida = document.getElementById("selectPartida");
+
+
 
 init();
 async function init() {
+    //window.addEventListener("resize", onWindowResize, false);
+
     btnLogin.addEventListener("click", () => {
         firebase.login();
     });
@@ -93,8 +98,16 @@ async function init() {
         firebase.createGame();
     });
     btnJoinGame.addEventListener("click", async () => {
+        firebase.joinGame();
+    });
+    btnLeaveGame.addEventListener("click", async () => {
+        firebase.leaveGame();
+    });
+    btnStartGame.addEventListener("click", async () => {
+        firebase.startGame(scene, player);
 
     });
+    selectPartida.addEventListener("dblclick", (event) => { firebase.joinGame(); });
 
 
     //Scene
@@ -107,7 +120,6 @@ async function init() {
 
 
     setupCannon();
-
     setupCamera();
     setupRenderer();
     setupLights()
@@ -142,6 +154,39 @@ function animate() {
     else {
         btnCreateGame.style.display = "none";
         btnJoinGame.style.display = "none";
+    }
+
+    firebase.inGameState ? btnLeaveGame.style.display = "block" : btnLeaveGame.style.display = "none";
+    
+    if (firebase.partidaRef != null){
+        btnJoinGame.style.display = "block";
+    }
+    else{
+        btnJoinGame.style.display = "none";
+    }
+    
+    if(firebase.inGameRef != null){
+        btnStartGame.style.display = "block";
+    }
+    else{
+        btnStartGame.style.display = "none";
+    }
+
+    if(firebase.gameStart){
+        firebase.usuariosEnJuego.forEach((jugador) => {
+            
+        });
+
+        if(!player.isON) {
+            player.load(scene, physicsWorld, {x: Math.floor((Math.random() * 800) - 800), y: 0, z: Math.floor((Math.random() * 800) - 800)}, {x: Math.floor((Math.random() * 800) - 800), y: 0, z: Math.floor((Math.random() * 800) - 800)}, wheelMaterial);
+            cameraFollow = true;
+
+
+
+        }
+            
+        rexy.perseguir(player);
+        player.update(firebase);
     }
 
 
@@ -391,10 +436,11 @@ function setupLights() {
 }
 // window contruct 
 function setupRenderer() {
+    let canvasDiv = document.getElementById("game");
     renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(720, 480);
     renderer.shadowMap.enabled = true;
-    document.body.appendChild(renderer.domElement);
+    canvasDiv.replaceWith(renderer.domElement);
 }
 
 function setupCamera() {
@@ -467,10 +513,15 @@ function setupCannon() {
     groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
     //physicsWorld.addBody(groundBody);
 
-
-
     //CANNON DEBUGGER
     cannonDebugger = new CannonDebugger(scene, physicsWorld);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function updateProgress(progress) {

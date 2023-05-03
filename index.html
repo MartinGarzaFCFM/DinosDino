@@ -2,20 +2,44 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <title>My first three.js app</title>
-    <style>
-        body {
-            margin: 0;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dinos Dino</title>
+    <link rel="stylesheet" href="./css/index.css" type="text/css">
 </head>
 
 <body>
-    <button id="btn-login">Inicio de Sesion</button>
-    <button id="btn-out">Cierre de Sesion</button>
-    <button id="btn-createGame">Crear Partida</button>
-    <button id="btn-joinGame">Unirse a Partida</button>
+    <div id="header">
+            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnPlay.png"></a>
+            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnSettings.png"></a>
+            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnScores.png"></a>
+            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnTutorial.png"></a>
+    </div>
+    <div id="glcanvas">
+        <div id="gameButtons">
+            <button id="btn-login">Inicio de Sesion</button>
+            <button id="btn-out">Cierre de Sesion</button>
+            <button id="btn-createGame">Crear Partida</button>
+            <button id="btn-joinGame">Unirse a Partida</button>
+            <button id="btn-leaveGame">Abandonar la Partida</button>    
+            <button id="btn-startGame">Empezar Partida</button>
+        </div>
+        <div id="gameScreen">
+            <div>
+                <select id="selectPartida" size = "5">
+                    <optgroup label="Partidas">
+
+                    </optgroup>
+                </select>
+            </div>
+            <div id="game"></div>
+        </div>
+    </div>
+    <div id="footer">
+        <p class="fix-stroke"> 2023 - Graficas en la web. <br> Karla, Martín y Regulo</p>
+    </div>
+
 </body>
 <script type="module" src="./js/index.js"></script>
 

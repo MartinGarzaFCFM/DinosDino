@@ -11,6 +11,7 @@ export class Carro extends Objeto {
         this.control;
         this.isON = false;
         this.ID = null;
+        this.loaded = false;
     }
     load(scene, physicsWorld, posicion, rotacion, wheelMaterial) {
         this.model = this.model.scene;
@@ -122,22 +123,18 @@ export class Carro extends Objeto {
                 wheelBody.quaternion.copy(transform.quaternion)
             }
         });
+
+        this.isON = true;
     }
 
-    update() {
+    update(firebase) {
         this.model.position.copy(this.cannonBody.position);
         this.model.position.y -= 5.0
         this.model.quaternion.copy(this.cannonBody.quaternion);
 
         this.boundingBox.setFromObject(this.model);
-    }
 
-    updateWithFirebase(posiciones, rotaciones){
-        this.model.position.set(posiciones.x, posiciones.y, posiciones.z);
-        this.model.position.y -= 5.0;
-        this.model.rotation.set(rotaciones.x, rotaciones.y, rotaciones.z);
-
-        this.boundingBox.setFromObject(this.model);
+        firebase.writeUserData(this.model.position);
     }
 }
 

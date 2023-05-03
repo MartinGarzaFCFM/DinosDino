@@ -59,6 +59,8 @@ let orbitControls;
 
 //Jugador
 var otrosJugadores = [];
+var posicionesJugadores = {};
+var jugadoresCargados = false;
 
 var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
 
@@ -104,7 +106,7 @@ async function init() {
         firebase.leaveGame();
     });
     btnStartGame.addEventListener("click", async () => {
-        firebase.startGame(scene, player);
+        firebase.startGame();
 
     });
     selectPartida.addEventListener("dblclick", (event) => { firebase.joinGame(); });
@@ -157,36 +159,53 @@ function animate() {
     }
 
     firebase.inGameState ? btnLeaveGame.style.display = "block" : btnLeaveGame.style.display = "none";
-    
-    if (firebase.partidaRef != null){
+
+    if (firebase.partidaRef != null) {
         btnJoinGame.style.display = "block";
     }
-    else{
+    else {
         btnJoinGame.style.display = "none";
     }
-    
-    if(firebase.inGameRef != null){
+
+    if (firebase.inGameRef != null) {
         btnStartGame.style.display = "block";
     }
-    else{
+    else {
         btnStartGame.style.display = "none";
     }
 
-    if(firebase.gameStart){
-        firebase.usuariosEnJuego.forEach((jugador) => {
-            
-        });
+    if (firebase.gameStart) {
+        posicionesJugadores = firebase.usuariosEnJuego;
+        console.log(jugadoresCargados); 
+        if (!jugadoresCargados) {
+            for (let i = 1; i < Object.keys(posicionesJugadores).length; i++) {
+                let posicion = Object.values(posicionesJugadores)[i];
+                
+                if (posicion.userUID !== firebase.userUID) {
+                    otrosJugadores.push(carroCrear(`${assetsPath}modelos/Carro/carro.gltf`));
+                    otrosJugadores[i - 1].load(scene, physicsWorld, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+                    otrosJugadores[i - 1].ID = posicion.userUID;
+                }
+                else {
+                    player.load(scene, physicsWorld, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+                }
+            }
+            jugadoresCargados = true;
+        }
 
-        if(!player.isON) {
-            player.load(scene, physicsWorld, {x: Math.floor((Math.random() * 800) - 800), y: 0, z: Math.floor((Math.random() * 800) - 800)}, {x: Math.floor((Math.random() * 800) - 800), y: 0, z: Math.floor((Math.random() * 800) - 800)}, wheelMaterial);
+
+        if (jugadoresCargados) {
+            playOthers();
+            otrosJugadores.forEach(jugador => {
+                jugador.update(firebase);
+            });
+
             cameraFollow = true;
-
+            rexy.perseguir(player);
+            player.update(firebase);
 
 
         }
-            
-        rexy.perseguir(player);
-        player.update(firebase);
     }
 
 
@@ -212,6 +231,13 @@ function animate() {
 
     requestAnimationFrame(function () { animate(); });
     renderer.render(scene, camera);
+}
+
+async function playOthers(){
+    otrosJugadores.forEach((jugador) => {
+        jugador.updateOther(firebase);
+        jugador.model.position.set(otrosJugadores.posX, otrosJugadores.posY, otrosJugadores.posZ);
+    });
 }
 
 

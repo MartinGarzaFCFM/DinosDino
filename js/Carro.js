@@ -136,6 +136,10 @@ export class Carro extends Objeto {
 
         firebase.writeUserData(this.model.position);
     }
+
+    updateOther(firebase){
+        firebase.sendOtherData(this.model.position, this.ID);
+    }
 }
 
 export async function carroCrear(rutaModelo) {

@@ -22,15 +22,16 @@ var provider;
 var db;
 
 //Referencias a las Bases
-var userUID = null;
+export var userUID = null;
 var usuariosRef;
 var partidaRef = null;
+var sala;
 
 //Datos
 export var inGameRef = null;
 export var usuarioConectado = null;
 export var inGameState = false;
-export var usuariosEnJuego = [];
+export var usuariosEnJuego = {};
 
 //Datos de Juego
 export var gameStart = false;
@@ -128,14 +129,17 @@ function logout() {
 }
 
 function createGame() {
-    let sala = prompt("Nombra la sala de espera: ");
+    do {
+        sala = prompt("Nombra la sala de espera: ");
+    } while (sala === "");
+
     update(ref(db, "Usuarios/" + userUID), {
         inGame: true
     });
     inGameState = true;
 
     set(ref(db, "Juegos/" + sala + "/" + userUID), {
-        userUID: userUID,
+        uid: userUID,
         gameState: "EnEspera",
         posX: Math.floor((Math.random() * 800) - 800),
         posZ: Math.floor((Math.random() * 800) - 800),
@@ -155,10 +159,7 @@ function createGame() {
 
     //Actualizar los datos locales con las posiciones de los jugadores
     onValue(inGameRef, (snapshot) => {
-        usuariosEnJuego = [];
-        snapshot.forEach(element => {
-            usuariosEnJuego.push(element.toJSON());
-        });
+        usuariosEnJuego = snapshot.val();
         console.log("Usuarios en Juego: ");
         console.log(usuariosEnJuego);
     });
@@ -179,6 +180,8 @@ function joinGame() {
     });
     inGameState = true;
     set(ref(db, "Juegos/" + selectPartida.value + "/" + userUID), {
+        uid: userUID,
+        gameState: "EnEspera",
         posX: Math.floor((Math.random() * 800) - 800),
         posZ: Math.floor((Math.random() * 800) - 800),
         rotX: 0,
@@ -189,7 +192,10 @@ function joinGame() {
 }
 
 function startGame(){
-
+    update(ref(db, "Juegos/" + sala + "/" + "GameStart"), {
+        gameStart: "Started"
+    });
+    gameStart = true;
 }
 
 function leaveGame() {
@@ -206,9 +212,17 @@ function leaveGame() {
 
 //escribe datos en la bdd
 function writeUserData(position) {
-    update(ref(db, inGameRef + "/" + userUID), {
-        x: position.x,
-        z: position.z
+    console.log(position);
+    update(ref(db, "Juegos/" + sala + "/" + userUID), {
+        posX: position.x,
+        posZ: position.z
+    });
+}
+
+function sendOtherData(position, uid) {
+    update(ref(db, "Juegos/" + sala + "/" + uid), {
+        posX: position.x,
+        posZ: position.z
     });
 }
 
@@ -221,5 +235,7 @@ export {
     createGame,
     joinGame,
     leaveGame,
-    writeUserData
+    writeUserData,
+    sendOtherData,
+    startGame
 }

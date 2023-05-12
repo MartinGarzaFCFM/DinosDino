@@ -88,19 +88,24 @@ function prepareEvents() {
         lookForGame();
     });
 
+    /*
     onChildAdded(usuariosRef, (data) => {
         userUID = data.key;
     });
     onChildChanged(usuariosRef, (data) => {
         userUID = data.key;
     });
+    
+    */
+
 }
 
 function login() {
     signInWithPopup(auth, provider)
         .then((result) => {
             console.log(result.user);
-            set(ref(db, "Usuarios/" + result.user.uid), {
+            userUID = result.user.uid;
+            set(ref(db, "Usuarios/" + userUID), {
                 connected: true,
                 inGame: false,
             });

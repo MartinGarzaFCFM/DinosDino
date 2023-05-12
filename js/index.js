@@ -180,15 +180,18 @@ function animate() {
         if (!jugadoresCargados) {
             for (let i = 1; i < Object.keys(posicionesJugadores).length; i++) {
                 let posicion = Object.values(posicionesJugadores)[i];
-                
-                if (posicion.userUID !== firebase.userUID) {
-                    otrosJugadores.push(carroCrear(`${assetsPath}modelos/Carro/carro.gltf`));
-                    otrosJugadores[i - 1].load(scene, physicsWorld, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
-                    otrosJugadores[i - 1].ID = posicion.userUID;
+                console.log(posicion);
+                if (posicion.uid !== firebase.userUID) {
+                    let other = player;
+                    otrosJugadores.push(other);
+                    otrosJugadores[i - 1].load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+                    otrosJugadores[i - 1].ID = posicion.uid;
+                    console.log(otrosJugadores);
                 }
                 else {
-                    player.load(scene, physicsWorld, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+                    player.load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
                 }
+                console.log("Loaded: " + i);
             }
             jugadoresCargados = true;
         }
@@ -233,7 +236,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-async function playOthers(){
+function playOthers(){
     otrosJugadores.forEach((jugador) => {
         jugador.updateOther(firebase);
         jugador.model.position.set(otrosJugadores.posX, otrosJugadores.posY, otrosJugadores.posZ);

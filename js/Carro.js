@@ -26,6 +26,8 @@ export class Carro extends Objeto {
         this.chaseCam.rotateY(Math.PI / 2)
         chaseCamPivot.add(this.chaseCam);
 
+        console.log(this.model.scene);
+
         this.model.position.set(posicion.x, posicion.y, posicion.z);
         this.model.rotation.set(rotacion.x, rotacion.y, rotacion.z);
         this.model.scale.set(4, 4, 4);

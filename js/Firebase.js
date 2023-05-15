@@ -24,7 +24,6 @@ var db;
 //Referencias a las Bases
 export var userUID = null;
 var usuariosRef;
-var partidaRef = null;
 var sala;
 
 //Datos
@@ -34,7 +33,7 @@ export var inGameState = false;
 export var usuariosEnJuego = {};
 
 //Datos de Juego
-export var gameStart = false;
+export var gameState = "";
 export var playerPosition = null;
 export var playerRotation = null;
 
@@ -58,7 +57,6 @@ function lookForGame() {
     const dbRef = ref(getDatabase());
     get(child(dbRef, "Juegos/")).then((snapshot) => {
         if (snapshot.hasChildren()) {
-            console.log("Hay un juego en curso");
             let selectPartida = document.getElementById("selectPartida");
             selectPartida.innerHTML = "";
             snapshot.forEach(function (snapshot) {
@@ -100,7 +98,7 @@ function prepareEvents() {
 
 }
 
-function login() {
+function login(btnCreateGame, btnJoinGame) {
     signInWithPopup(auth, provider)
         .then((result) => {
             console.log(result.user);
@@ -110,6 +108,8 @@ function login() {
                 inGame: false,
             });
             usuarioConectado = true;
+            btnCreateGame.style.display = "block";
+            btnJoinGame.style.display = "block";
 
         }).catch((error) => {
             const errorCode = error.code;
@@ -118,9 +118,10 @@ function login() {
         });
 }
 
-function logout() {
+function logout(btnStartGame, btnLeaveGame) {
     if (inGameRef != null) {
-        leaveGame();
+        btnStartGame.style.display = "none";
+        leaveGame(btnStartGame, btnLeaveGame);
     }
     signOut(auth).then(() => {
         set(ref(db, "Usuarios/" + userUID), {
@@ -133,7 +134,7 @@ function logout() {
     usuarioConectado = false;
 }
 
-function createGame() {
+function createGame(btnStartGame, btnLeaveGame) {
     do {
         sala = prompt("Nombra la sala de espera: ");
     } while (sala === "");
@@ -156,8 +157,8 @@ function createGame() {
     });
 
     //GameStartVar
-    set(ref(db, "Juegos/" + sala + "/GameStart"), {
-        gameState: "Waiting"
+    set(ref(db, "Juegos/" + sala + "/GameState"), {
+        gameState: "EnEspera"
     });
 
     inGameRef = ref(db, "Juegos/" + sala);
@@ -165,26 +166,27 @@ function createGame() {
     //Actualizar los datos locales con las posiciones de los jugadores
     onValue(inGameRef, (snapshot) => {
         usuariosEnJuego = snapshot.val();
-        console.log("Usuarios en Juego: ");
-        console.log(usuariosEnJuego);
     });
 
     //Detectar si el Juego ha empezado
-    onValue(ref(db, "Juegos/" + sala + "/GameStart"), (snapshot) => {
-        gameStart = snapshot.value;
+    onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
+        gameState = snapshot.val();
+        gameState = gameState.gameState;
     });
 
+    btnStartGame.style.display = "block";
+    btnLeaveGame.style.display = "block";
 }
 
 function joinGame() {
-    let selectPartida = document.getElementById("selectPartida");
-    console.log(selectPartida.value);
-    
+    sala = document.getElementById("selectPartida").value;
+    console.log(sala);
+
     update(ref(db, "Usuarios/" + userUID), {
         inGame: true
     });
     inGameState = true;
-    set(ref(db, "Juegos/" + selectPartida.value + "/" + userUID), {
+    set(ref(db, "Juegos/" + sala + "/" + userUID), {
         uid: userUID,
         gameState: "EnEspera",
         posX: Math.floor((Math.random() * 800) - 800),
@@ -193,17 +195,35 @@ function joinGame() {
         rotY: 0,
         rotZ: 0
     });
-    inGameRef = ref(db, "Juegos/" + selectPartida.value);
-}
+    inGameRef = ref(db, "Juegos/" + sala);
 
-function startGame(){
-    update(ref(db, "Juegos/" + sala + "/" + "GameStart"), {
-        gameStart: "Started"
+    //Actualizar los datos locales con las posiciones de los jugadores
+    onValue(inGameRef, (snapshot) => {
+        usuariosEnJuego = snapshot.val();
+        console.log(usuariosEnJuego);
     });
-    gameStart = true;
+
+    //Detectar si el Juego ha empezado
+    onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
+        gameState = snapshot.val();
+        gameState = gameState.gameState;
+        console.log(gameState);
+    });
 }
 
-function leaveGame() {
+function startGame() {
+    update(ref(db, "Juegos/" + sala + "/" + "GameState"), {
+        gameState: "Started"
+    });
+}
+
+function iAmReady () {
+    update(ref(db, "Juegos/" + sala +  "/" + userUID), {
+        gameState: "Listo"
+    });
+}
+
+function leaveGame(btnStartGame, btnLeaveGame) {
 
     remove(inGameRef).then(() => {
         console.log("Saliste del juego.");
@@ -213,11 +233,13 @@ function leaveGame() {
     });
     inGameState = false;
     inGameRef = null;
+
+    btnStartGame.style.display = "none";
+    btnLeaveGame.style.display = "none";
 }
 
 //escribe datos en la bdd
 function writeUserData(position) {
-    console.log(position);
     update(ref(db, "Juegos/" + sala + "/" + userUID), {
         posX: position.x,
         posZ: position.z
@@ -242,5 +264,6 @@ export {
     leaveGame,
     writeUserData,
     sendOtherData,
-    startGame
+    startGame,
+    iAmReady
 }

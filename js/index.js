@@ -58,6 +58,7 @@ let skydomeSize;
 let orbitControls;
 
 //Jugador
+var otrosJugadoresQty = 0;
 var otrosJugadores = [];
 var posicionesJugadores = {};
 var jugadoresCargados = false;
@@ -81,8 +82,12 @@ const btnCreateGame = document.getElementById("btn-createGame");
 const btnJoinGame = document.getElementById("btn-joinGame");
 const btnLeaveGame = document.getElementById("btn-leaveGame");
 const btnStartGame = document.getElementById("btn-startGame");
-
+const btnIAmReady = document.getElementById("btn-iAmReady");
 const selectPartida = document.getElementById("selectPartida");
+
+//styleStarts
+btnCreateGame.style.display = "none";
+btnJoinGame.style.display = "none";
 
 
 
@@ -91,10 +96,10 @@ async function init() {
     //window.addEventListener("resize", onWindowResize, false);
 
     btnLogin.addEventListener("click", () => {
-        firebase.login();
+        firebase.login(btnCreateGame, btnJoinGame);
     });
     btnLogout.addEventListener("click", async () => {
-        firebase.logout();
+        firebase.logout(btnStartGame, btnLeaveGame);
     });
     btnCreateGame.addEventListener("click", async () => {
         firebase.createGame();
@@ -103,12 +108,19 @@ async function init() {
         firebase.joinGame();
     });
     btnLeaveGame.addEventListener("click", async () => {
-        firebase.leaveGame();
+        firebase.leaveGame(btnStartGame, btnLeaveGame);
     });
     btnStartGame.addEventListener("click", async () => {
         firebase.startGame();
-
     });
+
+    btnIAmReady.addEventListener("click", async () => {
+        //Estoy Listo
+        await prepararJugadores();
+        player.isON = true;
+        firebase.iAmReady();
+    });
+
     selectPartida.addEventListener("dblclick", (event) => { firebase.joinGame(); });
 
 
@@ -127,18 +139,9 @@ async function init() {
     setupLights()
     setupSkyDome();
     setupTerreno();
+    setupOrbitCamera();
 
     await cargarModelos();
-
-    //Orbit
-    orbitControls = new OrbitControls(camera, renderer.domElement);
-    orbitControls.rotateSpeed = 1.0;
-    orbitControls.zoomSpeed = 1.2;
-    orbitControls.dampingFactor = 0.2;
-    orbitControls.minDistance = 10;
-    orbitControls.maxDistance = 500;
-    orbitControls.enablePan = false
-    orbitControls.enabled = true;
 
     animate();
 }
@@ -149,101 +152,66 @@ function animate() {
 
     if (cameraFollow) followPlayer();
 
-    if (firebase.usuarioConectado != null) {
-        btnCreateGame.style.display = "block";
-        btnJoinGame.style.display = "block";
-    }
-    else {
-        btnCreateGame.style.display = "none";
-        btnJoinGame.style.display = "none";
-    }
 
-    firebase.inGameState ? btnLeaveGame.style.display = "block" : btnLeaveGame.style.display = "none";
+    if (firebase.gameState === "Started") {
+        cameraFollow = true;
+        rexy.perseguir(player);
+        player.update(firebase);
 
-    if (firebase.partidaRef != null) {
-        btnJoinGame.style.display = "block";
-    }
-    else {
-        btnJoinGame.style.display = "none";
-    }
-
-    if (firebase.inGameRef != null) {
-        btnStartGame.style.display = "block";
-    }
-    else {
-        btnStartGame.style.display = "none";
-    }
-
-    if (firebase.gameStart) {
-        posicionesJugadores = firebase.usuariosEnJuego;
-        console.log(jugadoresCargados); 
-        if (!jugadoresCargados) {
-            for (let i = 1; i < Object.keys(posicionesJugadores).length; i++) {
-                let posicion = Object.values(posicionesJugadores)[i];
-                console.log(posicion);
-                if (posicion.uid !== firebase.userUID) {
-                    let other = player;
-                    otrosJugadores.push(other);
-                    otrosJugadores[i - 1].load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
-                    otrosJugadores[i - 1].ID = posicion.uid;
-                    console.log(otrosJugadores);
-                }
-                else {
-                    player.load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
-                }
-                console.log("Loaded: " + i);
+        huevos.forEach((huevo) => {
+            huevo.collect(player.boundingBox);
+            if (huevo.collected) {
+                scene.remove(huevo.model);
+                huevo.boundingBox.makeEmpty();
             }
-            jugadoresCargados = true;
-        }
-
-
-        if (jugadoresCargados) {
-            playOthers();
-            otrosJugadores.forEach(jugador => {
-                jugador.update(firebase);
-            });
-
-            cameraFollow = true;
-            rexy.perseguir(player);
-            player.update(firebase);
-
-
-        }
+        });
+        if (otrosJugadores.length !== 0) playOthers();
     }
-
-
-
-
-
-    //rexy.perseguir(player);
-    //player.update();
-
-    //huevos.forEach((huevo) => {
-    //    huevo.collect(player.boundingBox);
-    //    if (huevo.collected) {
-    //        scene.remove(huevo.model);
-    //        huevo.boundingBox.makeEmpty();
-    //    }
-    //});
-
-
-
 
     //Reloj aplicado para animaciones
     rexy.mixer.update(clock.getDelta());
 
     requestAnimationFrame(function () { animate(); });
     renderer.render(scene, camera);
+
 }
 
-function playOthers(){
-    otrosJugadores.forEach((jugador) => {
-        jugador.updateOther(firebase);
-        jugador.model.position.set(otrosJugadores.posX, otrosJugadores.posY, otrosJugadores.posZ);
-    });
+async function playOthers() {
+    posicionesJugadores = firebase.usuariosEnJuego;
+
+    let keys = Object.keys(posicionesJugadores);
+
+    for (let i = 1; i < keys.length; i++) {
+        let posicion = Object.values(posicionesJugadores)[i];
+        otrosJugadores.forEach((otro) => {
+            if (posicion.uid !== firebase.userUID) {
+                otro.model.position.set(posicion.posX, 5, posicion.posZ);
+            }
+        });
+    }
 }
 
+async function prepararJugadores() {
+    posicionesJugadores = firebase.usuariosEnJuego;
 
+    for (let i = 1; i < Object.keys(posicionesJugadores).length; i++) {
+        let posicion = Object.values(posicionesJugadores)[i];
+        console.log(posicion);
+        if (posicion.uid !== firebase.userUID) {
+            let newCarro = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`)
+            newCarro.ID = posicion.uid;
+            newCarro.load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+            otrosJugadores.push(newCarro);
+        }
+        else {
+            player.load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+        }
+    }
+
+    console.log(posicionesJugadores);
+
+    jugadoresCargados = true;
+}
 
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;
@@ -338,21 +306,13 @@ function followPlayer() {
 
 
 async function cargarModelos() {
-    //Jugadores
-    if (firebase.game != null) {
-        Object.keys(firebase.game).forEach(key => {
-            let playerInst = player;
-            playerInst.ID = key;
-            otrosJugadores.push(playerInst);
-        })
-    }
-
     //Huevos
     huevos = [
         await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
         await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
         await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
     ];
+
     huevos.forEach((huevo) => {
         let min = -1000;
         let max = 1000;
@@ -438,6 +398,18 @@ function setupSkyDome() {
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.material.side = THREE.BackSide;
     scene.add(sphere);
+}
+
+function setupOrbitCamera() {
+    //Orbit
+    orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.rotateSpeed = 1.0;
+    orbitControls.zoomSpeed = 1.2;
+    orbitControls.dampingFactor = 0.2;
+    orbitControls.minDistance = 10;
+    orbitControls.maxDistance = 500;
+    orbitControls.enablePan = false
+    orbitControls.enabled = true;
 }
 
 function setupLights() {

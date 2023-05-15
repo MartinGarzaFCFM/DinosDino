@@ -26,7 +26,7 @@ export class Carro extends Objeto {
         this.chaseCam.rotateY(Math.PI / 2)
         chaseCamPivot.add(this.chaseCam);
 
-        console.log(this.model.scene);
+        console.log(this.ID);
 
         this.model.position.set(posicion.x, posicion.y, posicion.z);
         this.model.rotation.set(rotacion.x, rotacion.y, rotacion.z);
@@ -137,10 +137,6 @@ export class Carro extends Objeto {
         this.boundingBox.setFromObject(this.model);
 
         firebase.writeUserData(this.model.position);
-    }
-
-    updateOther(firebase){
-        firebase.sendOtherData(this.model.position, this.ID);
     }
 }
 

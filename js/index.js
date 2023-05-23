@@ -69,7 +69,8 @@ var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
 //Dinosaurios
 var rexy;
 
-var huevos;
+var huevos = [];
+var posicionesHuevos = {};
 
 //Firebase
 firebase.init();
@@ -213,6 +214,18 @@ async function prepararJugadores() {
     jugadoresCargados = true;
 }
 
+async function prepararHuevos() {
+    posicionesHuevos = firebase.huevosEnJuego;
+
+    for (let i = 0; i < Object.keys(posicionesHuevos).length; i++) {
+        let posicion = Object.values(posicionesHuevos)[i];
+        let newHuevo = await huevoCrear(`${assetsPath}modelos/Huevo.fbx`);
+        newHuevo.ID = posicion.huevoID;
+        newHuevo.load(scene, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, { x: 2, y: 2, z: 2 });
+        huevos.push(newHuevo);
+    }
+}
+
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;
     const maxForce = 5000;
@@ -306,21 +319,6 @@ function followPlayer() {
 
 
 async function cargarModelos() {
-    //Huevos
-    huevos = [
-        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
-        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
-        await huevoCrear(`${assetsPath}modelos/Huevo.fbx`),
-    ];
-
-    huevos.forEach((huevo) => {
-        let min = -1000;
-        let max = 1000;
-        let posicionX = (Math.random() * (max - min) + min).toFixed(4);
-        let posicionZ = (Math.random() * (max - min) + min).toFixed(4);
-        huevo.load(scene, { x: posicionX, y: 0, z: posicionZ }, { x: 0, y: 0, z: 0 }, { x: 2, y: 2, z: 2 });
-    });
-
     //Edificios
     const laboratorio = await edificioCrear(`${assetsPath}modelos/Edificios/Lab.fbx`);
     laboratorio.load(

@@ -31,6 +31,7 @@ export var inGameRef = null;
 export var usuarioConectado = null;
 export var inGameState = false;
 export var usuariosEnJuego = {};
+export var huevosEnJuego = {};
 
 //Datos de Juego
 export var gameState = "";
@@ -144,7 +145,7 @@ function createGame(btnStartGame, btnLeaveGame) {
     });
     inGameState = true;
 
-    set(ref(db, "Juegos/" + sala + "/" + userUID), {
+    set(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
         uid: userUID,
         gameState: "EnEspera",
         posX: Math.floor((Math.random() * 800) - 800),
@@ -161,7 +162,7 @@ function createGame(btnStartGame, btnLeaveGame) {
         gameState: "EnEspera"
     });
 
-    inGameRef = ref(db, "Juegos/" + sala);
+    inGameRef = ref(db, "Juegos/" + sala + "/" + "Jugadores/");
 
     //Actualizar los datos locales con las posiciones de los jugadores
     onValue(inGameRef, (snapshot) => {
@@ -172,6 +173,25 @@ function createGame(btnStartGame, btnLeaveGame) {
     onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
         gameState = snapshot.val();
         gameState = gameState.gameState;
+    });
+
+    //Preparar los Huevos collecionables
+    //Generar la cantidad de Huevos
+    let max = 20;
+    let min = 10;
+    let cantidadHuevos = Math.random() * (max - min + 1) + min;
+
+    for (let huevo = 0; huevo <= cantidadHuevos; huevo++) {
+        set(ref(db, "Juegos/" + sala + "/Huevos"), {
+            huevoID: huevo,
+            isCollected: 0,
+            posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
+            posZ: (Math.random() * (1000 - -1000) + -1000).toFixed(4)
+        });
+    }
+
+    onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
+        huevosEnJuego = snapshot.val();
     });
 
     btnStartGame.style.display = "block";
@@ -186,7 +206,7 @@ function joinGame() {
         inGame: true
     });
     inGameState = true;
-    set(ref(db, "Juegos/" + sala + "/" + userUID), {
+    set(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
         uid: userUID,
         gameState: "EnEspera",
         posX: Math.floor((Math.random() * 800) - 800),
@@ -195,7 +215,7 @@ function joinGame() {
         rotY: 0,
         rotZ: 0
     });
-    inGameRef = ref(db, "Juegos/" + sala);
+    inGameRef = ref(db, "Juegos/" + sala + "/" + "Jugadores/");
 
     //Actualizar los datos locales con las posiciones de los jugadores
     onValue(inGameRef, (snapshot) => {
@@ -209,6 +229,10 @@ function joinGame() {
         gameState = gameState.gameState;
         console.log(gameState);
     });
+
+    onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
+        huevosEnJuego = snapshot.val();
+    });
 }
 
 function startGame() {
@@ -217,8 +241,8 @@ function startGame() {
     });
 }
 
-function iAmReady () {
-    update(ref(db, "Juegos/" + sala +  "/" + userUID), {
+function iAmReady() {
+    update(ref(db, "Juegos/" + sala + "/" + userUID), {
         gameState: "Listo"
     });
 }

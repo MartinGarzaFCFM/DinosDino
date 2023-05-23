@@ -5,6 +5,7 @@ import { modelLoader } from "./loaders/modelLoader.js";
 export class Huevo extends Objeto{
     constructor(objeto){
         super();
+        this.ID;
         this.collected = false;
     }
     collect(playerBoundingBox){

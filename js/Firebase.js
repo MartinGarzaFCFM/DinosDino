@@ -182,7 +182,7 @@ function createGame(btnStartGame, btnLeaveGame) {
     let cantidadHuevos = Math.random() * (max - min + 1) + min;
 
     for (let huevo = 0; huevo <= cantidadHuevos; huevo++) {
-        set(ref(db, "Juegos/" + sala + "/Huevos"), {
+        update(ref(db, "Juegos/" + sala + "/" + "Huevos/" + huevo), {
             huevoID: huevo,
             isCollected: 0,
             posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
@@ -190,6 +190,7 @@ function createGame(btnStartGame, btnLeaveGame) {
         });
     }
 
+    //Detectar el cambio en la tabla de Huevos
     onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
         huevosEnJuego = snapshot.val();
     });
@@ -213,7 +214,9 @@ function joinGame() {
         posZ: Math.floor((Math.random() * 800) - 800),
         rotX: 0,
         rotY: 0,
-        rotZ: 0
+        rotZ: 0,
+        hp: 5,
+        points: 0
     });
     inGameRef = ref(db, "Juegos/" + sala + "/" + "Jugadores/");
 
@@ -230,6 +233,7 @@ function joinGame() {
         console.log(gameState);
     });
 
+    //Detectar el cambio en la tabla de Huevos
     onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
         huevosEnJuego = snapshot.val();
     });
@@ -242,14 +246,14 @@ function startGame() {
 }
 
 function iAmReady() {
-    update(ref(db, "Juegos/" + sala + "/" + userUID), {
+    update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
         gameState: "Listo"
     });
 }
 
 function leaveGame(btnStartGame, btnLeaveGame) {
 
-    remove(inGameRef).then(() => {
+    remove(ref(db, "Juegos/" + sala)).then(() => {
         console.log("Saliste del juego.");
     });
     update(ref(db, "Usuarios/" + userUID), {
@@ -262,9 +266,25 @@ function leaveGame(btnStartGame, btnLeaveGame) {
     btnLeaveGame.style.display = "none";
 }
 
+export function gotEgg(huevoID){
+    console.log(huevoID);
+    update(ref(db, "Juegos/" + sala + "/" + "Huevos/" + huevoID), {
+        isCollected: 1
+    });
+
+    console.log(usuariosEnJuego[userUID]);
+    let puntosActuales = usuariosEnJuego[userUID].points;
+    console.log(usuariosEnJuego[userUID]);
+    update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
+        points: puntosActuales + 1
+    });
+    console.log(usuariosEnJuego[userUID]);
+
+}
+
 //escribe datos en la bdd
 function writeUserData(position) {
-    update(ref(db, "Juegos/" + sala + "/" + userUID), {
+    update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
         posX: position.x,
         posZ: position.z
     });

@@ -118,6 +118,7 @@ async function init() {
     btnIAmReady.addEventListener("click", async () => {
         //Estoy Listo
         await prepararJugadores();
+        await prepararHuevos();
         player.isON = true;
         firebase.iAmReady();
     });
@@ -160,13 +161,15 @@ function animate() {
         player.update(firebase);
 
         huevos.forEach((huevo) => {
-            huevo.collect(player.boundingBox);
-            if (huevo.collected) {
+            huevo.collect(player.boundingBox, huevo.ID);
+            if (huevo.collected && huevo.isOn) {
                 scene.remove(huevo.model);
+                huevo.isOn = false;
                 huevo.boundingBox.makeEmpty();
             }
         });
         if (otrosJugadores.length !== 0) playOthers();
+        playHuevos();
     }
 
     //Reloj aplicado para animaciones
@@ -182,7 +185,7 @@ async function playOthers() {
 
     let keys = Object.keys(posicionesJugadores);
 
-    for (let i = 1; i < keys.length; i++) {
+    for (let i = 0; i < keys.length; i++) {
         let posicion = Object.values(posicionesJugadores)[i];
         otrosJugadores.forEach((otro) => {
             if (posicion.uid !== firebase.userUID) {
@@ -192,10 +195,25 @@ async function playOthers() {
     }
 }
 
+async function playHuevos() {
+    posicionesHuevos = firebase.huevosEnJuego;
+
+    let keys = Object.keys(posicionesHuevos);
+
+    for (let i = 0; i < keys.length; i++) {
+        let posicion = Object.values(posicionesHuevos)[i];
+        huevos.forEach((huevo) =>{
+            if(huevo.ID === posicion.huevoID && posicion.isCollected === 1){
+                huevo.remove();
+            }
+        });
+    }
+}
+
 async function prepararJugadores() {
     posicionesJugadores = firebase.usuariosEnJuego;
 
-    for (let i = 1; i < Object.keys(posicionesJugadores).length; i++) {
+    for (let i = 0; i < Object.keys(posicionesJugadores).length; i++) {
         let posicion = Object.values(posicionesJugadores)[i];
         console.log(posicion);
         if (posicion.uid !== firebase.userUID) {

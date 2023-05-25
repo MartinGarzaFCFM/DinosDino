@@ -35,6 +35,16 @@ let wheelMaterial;
 //Camara
 let cameraPosition;
 let camera;
+//Sonidos
+const listener = new THREE.AudioListener();
+const audioLoader = new THREE.AudioLoader();
+////Musica
+var menuMusic = new THREE.Audio(listener);
+
+////Sonidos SFX
+var clickSound = new THREE.Audio(listener);
+var carEngineStart = new THREE.Audio(listener);
+
 //Permitir que siga al jugador
 let cameraFollow = false;
 
@@ -97,21 +107,27 @@ async function init() {
     //window.addEventListener("resize", onWindowResize, false);
 
     btnLogin.addEventListener("click", () => {
+        clickSound.play();
         firebase.login(btnCreateGame, btnJoinGame);
     });
     btnLogout.addEventListener("click", async () => {
+        clickSound.play();
         firebase.logout(btnStartGame, btnLeaveGame);
     });
     btnCreateGame.addEventListener("click", async () => {
+        clickSound.play();
         firebase.createGame();
     });
     btnJoinGame.addEventListener("click", async () => {
+        clickSound.play();
         firebase.joinGame();
     });
     btnLeaveGame.addEventListener("click", async () => {
+        clickSound.play();
         firebase.leaveGame(btnStartGame, btnLeaveGame);
     });
     btnStartGame.addEventListener("click", async () => {
+        clickSound.play();
         firebase.startGame();
     });
 
@@ -121,6 +137,7 @@ async function init() {
         await prepararHuevos();
         player.isON = true;
         firebase.iAmReady();
+        carEngineStart.play();
     });
 
     selectPartida.addEventListener("dblclick", (event) => { firebase.joinGame(); });
@@ -137,6 +154,7 @@ async function init() {
 
     setupCannon();
     setupCamera();
+    setupSounds();
     setupRenderer();
     setupLights()
     setupSkyDome();
@@ -172,6 +190,14 @@ function animate() {
         playHuevos();
     }
 
+    if (firebase.gameState === "Finishing") {
+        cameraFollow = false;
+        player.update(firebase);
+        if (otrosJugadores.length !== 0) playOthers();
+        console.log(firebase.uidGanador);
+        console.log(firebase.huevosRecogidos);
+    }
+
     //Reloj aplicado para animaciones
     rexy.mixer.update(clock.getDelta());
 
@@ -202,8 +228,8 @@ async function playHuevos() {
 
     for (let i = 0; i < keys.length; i++) {
         let posicion = Object.values(posicionesHuevos)[i];
-        huevos.forEach((huevo) =>{
-            if(huevo.ID === posicion.huevoID && posicion.isCollected === 1){
+        huevos.forEach((huevo) => {
+            if (huevo.ID === posicion.huevoID && posicion.isCollected === 1) {
                 huevo.remove();
             }
         });
@@ -467,6 +493,28 @@ function setupCamera() {
     camera.near = 0.1;
     camera.far = 5000;
     camera.updateProjectionMatrix();
+}
+
+function setupSounds() {
+    //Musica de Menu
+    audioLoader.load("../assets/musica/jungleTribal.mp3", function (buffer) {
+        menuMusic.setBuffer(buffer);
+        menuMusic.setLoop(true);
+        menuMusic.setVolume(0.1);
+        menuMusic.play();
+    });
+
+    //clicks
+    audioLoader.load("../assets/sonidos/click.wav", function (buffer){
+        clickSound.setBuffer(buffer);
+        clickSound.setVolume(0.2);
+    });
+
+    //Encendido de Auto
+    audioLoader.load("../assets/sonidos/car-engine-start.wav", function(buffer){
+        carEngineStart.setBuffer(buffer);
+        carEngineStart.setVolume(0.9);
+    });
 }
 
 function setupCannon() {

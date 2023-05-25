@@ -35,8 +35,11 @@ export var huevosEnJuego = {};
 
 //Datos de Juego
 export var gameState = "";
+export var cantidadHuevos = 0;
 export var playerPosition = null;
 export var playerRotation = null;
+export var uidGanador;
+export var huevosRecogidos = 0;
 
 function init() {
     app = initializeApp(firebaseConfig);
@@ -169,30 +172,37 @@ function createGame(btnStartGame, btnLeaveGame) {
         usuariosEnJuego = snapshot.val();
     });
 
-    //Detectar si el Juego ha empezado
-    onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
-        gameState = snapshot.val();
-        gameState = gameState.gameState;
-    });
-
     //Preparar los Huevos collecionables
     //Generar la cantidad de Huevos
-    let max = 20;
-    let min = 10;
-    let cantidadHuevos = Math.random() * (max - min + 1) + min;
+    let max = 3;
+    let min = 1;
+    let huevosTotales = Math.floor(Math.random() * (max - min + 1) + min);
 
-    for (let huevo = 0; huevo <= cantidadHuevos; huevo++) {
+    for (let huevo = 0; huevo <= huevosTotales; huevo++) {
         update(ref(db, "Juegos/" + sala + "/" + "Huevos/" + huevo), {
             huevoID: huevo,
             isCollected: 0,
             posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
             posZ: (Math.random() * (1000 - -1000) + -1000).toFixed(4)
         });
+        cantidadHuevos++;
     }
+
+    //Guardar la cantidad de Huevos creados en Firebase para detectar cuantos hay y cuando se acabaron para determinar ganador.
+    update(ref(db, "Juegos/" + sala + "/GameState"), {
+        TotalHuevos: cantidadHuevos
+    });
 
     //Detectar el cambio en la tabla de Huevos
     onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
         huevosEnJuego = snapshot.val();
+    });
+
+    //Detectar si el Juego ha empezado
+    onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
+        gameState = snapshot.val();
+        cantidadHuevos = gameState.TotalHuevos;
+        gameState = gameState.gameState;
     });
 
     btnStartGame.style.display = "block";
@@ -223,14 +233,19 @@ function joinGame() {
     //Actualizar los datos locales con las posiciones de los jugadores
     onValue(inGameRef, (snapshot) => {
         usuariosEnJuego = snapshot.val();
-        console.log(usuariosEnJuego);
     });
 
     //Detectar si el Juego ha empezado
     onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
         gameState = snapshot.val();
+        cantidadHuevos = gameState.TotalHuevos;
         gameState = gameState.gameState;
-        console.log(gameState);
+
+        if (cantidadHuevos === 0) {
+            buscarGanador();
+        }
+        console.log("HUEVOS restantes");
+        console.log(cantidadHuevos);
     });
 
     //Detectar el cambio en la tabla de Huevos
@@ -242,6 +257,12 @@ function joinGame() {
 function startGame() {
     update(ref(db, "Juegos/" + sala + "/" + "GameState"), {
         gameState: "Started"
+    });
+}
+
+function endingGame(){
+    update(ref(db, "Juegos/" + sala + "/" + "GameState"), {
+        gameState: "Finishing"
     });
 }
 
@@ -266,20 +287,36 @@ function leaveGame(btnStartGame, btnLeaveGame) {
     btnLeaveGame.style.display = "none";
 }
 
-export function gotEgg(huevoID){
-    console.log(huevoID);
+export function gotEgg(huevoID) {
     update(ref(db, "Juegos/" + sala + "/" + "Huevos/" + huevoID), {
         isCollected: 1
     });
 
-    console.log(usuariosEnJuego[userUID]);
     let puntosActuales = usuariosEnJuego[userUID].points;
-    console.log(usuariosEnJuego[userUID]);
     update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
         points: puntosActuales + 1
     });
-    console.log(usuariosEnJuego[userUID]);
+    update(ref(db, "Juegos/" + sala + "/" + "GameState/"), {
+        TotalHuevos: cantidadHuevos - 1
+    });
+}
 
+function buscarGanador() {
+    uidGanador;
+    huevosRecogidos = 0;
+    for (let i = 0; i < Object.keys(usuariosEnJuego).length; i++) {
+        let stats = Object.values(usuariosEnJuego)[i];
+        if (stats.points > huevosRecogidos) {
+            huevosRecogidos = stats.points;
+            uidGanador = stats.uid;
+        }
+    }
+    console.log("GANADOR:");
+    console.log(uidGanador);
+    console.log("Puntos: ");
+    console.log(huevosRecogidos);
+
+    endingGame();
 }
 
 //escribe datos en la bdd

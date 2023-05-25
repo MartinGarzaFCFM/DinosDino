@@ -42,7 +42,7 @@ class Dinosaurio extends Objeto {
         const clip = THREE.AnimationClip.findByName(clips, "Bip001|Take 001|BaseLayer");
         this.action = this.mixer.clipAction(clip);
     }
-    perseguir(player) {
+    perseguir(player, difficultySpeed) {
         this.action.play();
 
         this.model.scene.lookAt(player.model.position)
@@ -52,9 +52,9 @@ class Dinosaurio extends Objeto {
         subvec = subvec.subVectors(player.model.position, this.model.scene.position);
 
         if (distancia < 1000) {
-            this.model.scene.position.x += .001 * 400 * (subvec.x / distancia);
-            this.model.scene.position.y += .001 * 400 * (subvec.y / distancia);
-            this.model.scene.position.z += .001 * 400 * (subvec.z / distancia);
+            this.model.scene.position.x += difficultySpeed * 400 * (subvec.x / distancia);
+            this.model.scene.position.y += difficultySpeed * 400 * (subvec.y / distancia);
+            this.model.scene.position.z += difficultySpeed * 400 * (subvec.z / distancia);
             this.ataca(player);
         }
 

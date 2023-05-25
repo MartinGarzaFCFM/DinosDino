@@ -11,10 +11,10 @@
 
 <body>
     <div id="header">
-            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnPlay.png"></a>
-            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnSettings.png"></a>
-            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnScores.png"></a>
-            <a href="play.html"><img class="btnplay" src="./assets/imagenes/BtnTutorial.png"></a>
+        <a href="#" id="btn-Play"><img class="btnplay" src="./assets/imagenes/BtnPlay.png"></a>
+        <a href="#" id="btn-Settings"><img class="btnplay" src="./assets/imagenes/BtnSettings.png"></a>
+        <a href="#" id="btn-Scores"><img class="btnplay" src="./assets/imagenes/BtnScores.png"></a>
+        <a href="#" id="btn-Tutorial"><img class="btnplay" src="./assets/imagenes/BtnTutorial.png"></a>
     </div>
     <div id="glcanvas">
         <div id="gameButtons">
@@ -22,13 +22,57 @@
             <button id="btn-out">Cierre de Sesion</button>
             <button id="btn-createGame">Crear Partida</button>
             <button id="btn-joinGame">Unirse a Partida</button>
-            <button id="btn-leaveGame">Abandonar la Partida</button>    
+            <button id="btn-leaveGame">Abandonar la Partida</button>
             <button id="btn-startGame">Empezar Partida</button>
             <button id="btn-iAmReady">Estoy Listo</button>
         </div>
+        <!--Ventanas Modales para los botones en la parte superior-->
+        <div id="modal-Settings" class="modal">
+            <div class="contenido-modal">
+                <span class="cerrar">&times;</span>
+                <h2>Opciones</h2>
+                <div>
+                    <p>Musica</p>
+                    <label class="switch">
+                        <input type="checkbox" id="checkbox-Music" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div>
+                    <p>Dificultad</p>
+                    <button id="btn-EasyMode">Facil</button>
+                    <button id="btn-MediumMode" style="border: solid;">Medio</button>
+                    <button id="btn-HardMode">Dificil</button>
+                </div>
+            </div>
+        </div>
+        <div id="modal-Pause" class="modal">
+            <div class="contenido-modal">
+                <span class="cerrar">&times;</span>
+                <h2>Opciones</h2>
+                <div>
+                    <h1>PAUSA</h1>
+                </div>
+            </div>
+        </div>
+        <div id="modal-Scores" class="modal">
+            <div class="contenido-modal">
+                <span id="modal-Scores-Close">&times;</span>
+                <h2>Puntuaciones</h2>
+                <div id="ScoreTable">
+                    <h1>Puntuaciones</h1>
+                </div>
+            </div>
+        </div>
+        <div id="modal-Winner" class="modal">
+            <div class="contenido-modal">
+                <h1>Ganador!</h1>
+                <h2 id="modal-Winner-Name"></h2>
+            </div>
+        </div>
         <div id="gameScreen">
             <div>
-                <select id="selectPartida" size = "5">
+                <select id="selectPartida" size="5">
                     <optgroup label="Partidas">
 
                     </optgroup>

@@ -36,6 +36,7 @@ let wheelMaterial;
 let cameraPosition;
 let camera;
 //Sonidos
+var musicON = true;
 const listener = new THREE.AudioListener();
 const audioLoader = new THREE.AudioLoader();
 ////Musica
@@ -73,6 +74,13 @@ var otrosJugadores = [];
 var posicionesJugadores = {};
 var jugadoresCargados = false;
 
+var isPaused = false;
+
+//Valores de Dificultad
+var tRexSpeed = 0.01;
+var playerSpeed = 5000;
+
+
 var player = await carroCrear(`${assetsPath}modelos/Carro/carro.gltf`);
 
 
@@ -86,6 +94,28 @@ var posicionesHuevos = {};
 firebase.init();
 
 //Funciones a Botones en HTML
+const btnPlay = document.getElementById("btn-Play");
+const btnSettings = document.getElementById("btn-Settings");
+const btnScores = document.getElementById("btn-Scores");
+const btnTutorial = document.getElementById("btn-Tutorial");
+
+//Modales
+const modalSettings = document.getElementById("modal-Settings");
+const modalPause = document.getElementById("modal-Pause");
+const modalScores = document.getElementById("modal-Scores");
+const modalScoresClose = document.getElementById("modal-Scores-Close");
+const span = document.getElementsByClassName("cerrar")[0];
+const tableScores = document.getElementById("ScoreTable");
+const modalWinner = document.getElementById("modal-Winner");
+var modalWinnerName = document.getElementById("modal-Winner-Name");
+
+//Switches
+const checkboxMusic = document.getElementById("checkbox-Music");
+var btnEasyMode = document.getElementById("btn-EasyMode");
+var btnMediumMode = document.getElementById("btn-MediumMode");
+var btnHardMode = document.getElementById("btn-HardMode");
+
+
 //TODO
 const btnLogin = document.getElementById("btn-login");
 const btnLogout = document.getElementById("btn-out");
@@ -105,6 +135,93 @@ btnJoinGame.style.display = "none";
 init();
 async function init() {
     //window.addEventListener("resize", onWindowResize, false);
+
+    btnPlay.addEventListener("click", () => {
+        clickSound.play();
+
+    });
+    btnSettings.addEventListener("click", () => {
+        clickSound.play();
+        modalSettings.style.display = "block";
+    });
+    btnScores.addEventListener("click", () => {
+        clickSound.play();
+        modalScores.style.display = "block"
+        var table = document.createElement("table");
+        let nameHeader = document.createElement("th");
+        let eggHeader = document.createElement("th");
+        nameHeader.textContent = "Nombre";
+        eggHeader.textContent = "Huevos Recolectados"
+        table.appendChild(nameHeader);
+        table.appendChild(eggHeader);
+        for (let i = 0; i < Object.keys(firebase.huevosDeUsuarios).length; i++) {
+            let usuario = Object.values(firebase.huevosDeUsuarios)[i];
+            console.log(usuario);
+            if(usuario.huevosTotales !== undefined){
+                let tr = document.createElement("tr");
+                let columnName = document.createElement("td");
+                let columnEggs = document.createElement("td");
+                
+                let textName = document.createTextNode(usuario.name);
+                let textEggs = document.createTextNode(usuario.huevosTotales);
+
+                columnName.appendChild(textName);
+                columnEggs.appendChild(textEggs);
+
+                tr.appendChild(columnName);
+                tr.appendChild(columnEggs);
+                table.appendChild(tr);
+            }                        
+        }
+        tableScores.appendChild(table);
+    });
+    btnTutorial.addEventListener("click", () => {
+        clickSound.play();
+
+    });
+
+    //Ventanas Modales
+    span.addEventListener("click", function () {
+        modalSettings.style.display = "none";
+    });
+
+    modalScoresClose.addEventListener("click", () => {
+        modalScores.style.display = "none";
+        tableScores.innerHTML = "";
+    });
+
+    window.addEventListener("click", function (event) {
+        if (event.target == modalSettings) {
+            modalSettings.style.display = "none";
+        }
+    });
+
+    //CheckBoxes
+    checkboxMusic.addEventListener("click", function () {
+        musicON ? menuMusic.stop() : menuMusic.play();
+        musicON = !musicON;
+        checkboxMusic.checked ? true : false;
+    });
+
+    ////Dificultades
+    btnEasyMode.addEventListener("click", () => {
+        firebase.changeDifficulty("Easy");
+        btnEasyMode.style.border = "solid";
+        btnMediumMode.style.border = "none";
+        btnHardMode.style.border = "none";
+    });
+    btnMediumMode.addEventListener("click", () => {
+        firebase.changeDifficulty("Medium");
+        btnEasyMode.style.border = "none";
+        btnMediumMode.style.border = "solid";
+        btnHardMode.style.border = "none";
+    });
+    btnHardMode.addEventListener("click", () => {
+        firebase.changeDifficulty("Hard");
+        btnEasyMode.style.border = "none";
+        btnMediumMode.style.border = "none";
+        btnHardMode.style.border = "solid";
+    });
 
     btnLogin.addEventListener("click", () => {
         clickSound.play();
@@ -135,6 +252,7 @@ async function init() {
         //Estoy Listo
         await prepararJugadores();
         await prepararHuevos();
+        prepararDificultad();
         player.isON = true;
         firebase.iAmReady();
         carEngineStart.play();
@@ -167,6 +285,7 @@ async function init() {
 }
 
 function animate() {
+
     physicsWorld.fixedStep();
     cannonDebugger.update();
 
@@ -175,8 +294,13 @@ function animate() {
 
     if (firebase.gameState === "Started") {
         cameraFollow = true;
-        rexy.perseguir(player);
-        player.update(firebase);
+        if(!isPaused){
+            rexy.perseguir(player, tRexSpeed);
+            player.update(firebase);
+        }
+        else{
+            player.pausa(firebase);
+        }
 
         huevos.forEach((huevo) => {
             huevo.collect(player.boundingBox, huevo.ID);
@@ -194,8 +318,9 @@ function animate() {
         cameraFollow = false;
         player.update(firebase);
         if (otrosJugadores.length !== 0) playOthers();
-        console.log(firebase.uidGanador);
-        console.log(firebase.huevosRecogidos);
+
+        modalWinner.style.display = "block";
+        modalWinnerName.innerHTML = firebase.usuarioGanador.name;
     }
 
     //Reloj aplicado para animaciones
@@ -270,22 +395,40 @@ async function prepararHuevos() {
     }
 }
 
+async function prepararDificultad() {
+    switch (firebase.difficulty) {
+        case "Easy":
+            tRexSpeed = 0.001
+            playerSpeed = 6500
+            break;
+        case "Medium":
+            tRexSpeed = 0.0015
+            playerSpeed = 6000
+            break;
+        case "Hard":
+            tRexSpeed = 0.002
+            playerSpeed = 5500
+            break;
+        default:
+            break;
+    }
+}
+
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;
-    const maxForce = 5000;
     const brakeForce = 200;
 
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            player.control.applyEngineForce(-maxForce, 2);
-            player.control.applyEngineForce(-maxForce, 3);
+            player.control.applyEngineForce(-playerSpeed, 2);
+            player.control.applyEngineForce(-playerSpeed, 3);
             break;
 
         case 's':
         case 'ArrowDown':
-            player.control.applyEngineForce(maxForce, 2);
-            player.control.applyEngineForce(maxForce, 3);
+            player.control.applyEngineForce(playerSpeed, 2);
+            player.control.applyEngineForce(playerSpeed, 3);
             break;
 
         case 'a':
@@ -349,6 +492,11 @@ document.addEventListener('keyup', (event) => {
             orbitControls.enabled = !orbitControls.enabled;
             orbitControls.target = player.model.position;
             cameraFollow = !cameraFollow;
+            break;
+
+        case 'p':
+            isPaused = !isPaused;
+            isPaused ? modalPause.style.display = "block" : modalPause.style.display = "none";
             break;
     }
 });
@@ -505,13 +653,13 @@ function setupSounds() {
     });
 
     //clicks
-    audioLoader.load("../assets/sonidos/click.wav", function (buffer){
+    audioLoader.load("../assets/sonidos/click.wav", function (buffer) {
         clickSound.setBuffer(buffer);
         clickSound.setVolume(0.2);
     });
 
     //Encendido de Auto
-    audioLoader.load("../assets/sonidos/car-engine-start.wav", function(buffer){
+    audioLoader.load("../assets/sonidos/car-engine-start.wav", function (buffer) {
         carEngineStart.setBuffer(buffer);
         carEngineStart.setVolume(0.9);
     });

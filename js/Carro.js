@@ -138,6 +138,16 @@ export class Carro extends Objeto {
 
         firebase.writeUserData(this.model.position);
     }
+
+    pausa(firebase){
+        this.cannonBody.position.copy(this.cannonBody.position)
+        this.cannonBody.quaternion.copy(this.cannonBody.quaternion)
+        this.model.position.copy(this.cannonBody.position);
+        this.model.quaternion.copy(this.cannonBody.quaternion);
+        this.boundingBox.setFromObject(this.model);
+
+        firebase.writeUserData(this.model.position);
+    }
 }
 
 export async function carroCrear(rutaModelo) {

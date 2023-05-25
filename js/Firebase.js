@@ -23,6 +23,7 @@ var db;
 
 //Referencias a las Bases
 export var userUID = null;
+export var userName = null;
 var usuariosRef;
 var sala;
 
@@ -32,13 +33,16 @@ export var usuarioConectado = null;
 export var inGameState = false;
 export var usuariosEnJuego = {};
 export var huevosEnJuego = {};
+export var huevosDeUsuarios = {};
 
 //Datos de Juego
 export var gameState = "";
+export var difficulty = "Medium";
 export var cantidadHuevos = 0;
 export var playerPosition = null;
 export var playerRotation = null;
 export var uidGanador;
+export var usuarioGanador;
 export var huevosRecogidos = 0;
 
 function init() {
@@ -50,7 +54,25 @@ function init() {
 
     prepareRefs();
     prepareEvents();
+    prepareScores();
     lookForGame();
+}
+
+export function changeDifficulty(key) {
+    switch (key) {
+        case "Easy":
+            difficulty = key;
+            break;
+        case "Medium":
+            difficulty = key;
+            break;
+        case "Hard":
+            difficulty = key;
+            break;
+
+        default:
+            break;
+    }
 }
 
 function prepareRefs() {
@@ -102,14 +124,22 @@ function prepareEvents() {
 
 }
 
+function prepareScores(){
+    onValue(ref(db, "Usuarios/"), (snapshot) => {
+        huevosDeUsuarios = snapshot.val();
+    });
+}
+
 function login(btnCreateGame, btnJoinGame) {
     signInWithPopup(auth, provider)
         .then((result) => {
             console.log(result.user);
             userUID = result.user.uid;
-            set(ref(db, "Usuarios/" + userUID), {
+            userName = result.user.displayName;
+            update(ref(db, "Usuarios/" + userUID), {
+                name: userName,
                 connected: true,
-                inGame: false,
+                inGame: false
             });
             usuarioConectado = true;
             btnCreateGame.style.display = "block";
@@ -128,7 +158,7 @@ function logout(btnStartGame, btnLeaveGame) {
         leaveGame(btnStartGame, btnLeaveGame);
     }
     signOut(auth).then(() => {
-        set(ref(db, "Usuarios/" + userUID), {
+        update(ref(db, "Usuarios/" + userUID), {
             connected: false,
             inGame: false
         });
@@ -141,7 +171,7 @@ function logout(btnStartGame, btnLeaveGame) {
 function createGame(btnStartGame, btnLeaveGame) {
     do {
         sala = prompt("Nombra la sala de espera: ");
-    } while (sala === "");
+    } while (sala === "" || sala === null);
 
     update(ref(db, "Usuarios/" + userUID), {
         inGame: true
@@ -162,7 +192,8 @@ function createGame(btnStartGame, btnLeaveGame) {
 
     //GameStartVar
     set(ref(db, "Juegos/" + sala + "/GameState"), {
-        gameState: "EnEspera"
+        gameState: "EnEspera",
+        difficulty: difficulty
     });
 
     inGameRef = ref(db, "Juegos/" + sala + "/" + "Jugadores/");
@@ -203,6 +234,12 @@ function createGame(btnStartGame, btnLeaveGame) {
         gameState = snapshot.val();
         cantidadHuevos = gameState.TotalHuevos;
         gameState = gameState.gameState;
+
+        if (cantidadHuevos === 0) {
+            buscarGanador();
+        }
+        console.log("HUEVOS restantes");
+        console.log(cantidadHuevos);
     });
 
     btnStartGame.style.display = "block";
@@ -211,7 +248,6 @@ function createGame(btnStartGame, btnLeaveGame) {
 
 function joinGame() {
     sala = document.getElementById("selectPartida").value;
-    console.log(sala);
 
     update(ref(db, "Usuarios/" + userUID), {
         inGame: true
@@ -239,6 +275,7 @@ function joinGame() {
     onValue(ref(db, "Juegos/" + sala + "/GameState"), (snapshot) => {
         gameState = snapshot.val();
         cantidadHuevos = gameState.TotalHuevos;
+        difficulty = gameState.difficulty;
         gameState = gameState.gameState;
 
         if (cantidadHuevos === 0) {
@@ -260,7 +297,7 @@ function startGame() {
     });
 }
 
-function endingGame(){
+function endingGame() {
     update(ref(db, "Juegos/" + sala + "/" + "GameState"), {
         gameState: "Finishing"
     });
@@ -302,7 +339,6 @@ export function gotEgg(huevoID) {
 }
 
 function buscarGanador() {
-    uidGanador;
     huevosRecogidos = 0;
     for (let i = 0; i < Object.keys(usuariosEnJuego).length; i++) {
         let stats = Object.values(usuariosEnJuego)[i];
@@ -315,6 +351,15 @@ function buscarGanador() {
     console.log(uidGanador);
     console.log("Puntos: ");
     console.log(huevosRecogidos);
+
+    console.log(huevosDeUsuarios);
+    usuarioGanador = huevosDeUsuarios[uidGanador];
+    console.log(usuarioGanador);
+
+    let totalDeHuevos = usuarioGanador.huevosTotales + huevosRecogidos;
+    update(ref(db, "Usuarios/" + uidGanador), {
+        huevosTotales: totalDeHuevos
+    });
 
     endingGame();
 }

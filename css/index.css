@@ -44,6 +44,40 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: center;
+    position: relative;
+}
+
+#HP{
+    color: white;
+    position: absolute;
+    top: 0%;
+    left: 30%;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+#HP div{
+    margin: 0;
+}
+
+#div-BonusSpeed{
+    position: absolute;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    top: 0%;
+    left: 70%;
+    font-weight: bold;
+}
+
+#div-HuevosRestantes{
+    position: absolute;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    top: 90%;
+    left: 63%;
+    font-weight: bold;
 }
 
 .btnplay {

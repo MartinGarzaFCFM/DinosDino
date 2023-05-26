@@ -2,6 +2,7 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { Objeto } from "./Objeto";
 import { modelLoader } from "./loaders/modelLoader";
+import * as firebase from "./Firebase";
 
 class Dinosaurio extends Objeto {
     constructor() {
@@ -34,7 +35,7 @@ class Dinosaurio extends Objeto {
         this.boundingBoxHelper.position.copy(center);
         this.boundingBoxHelper.scale.set(size.x, size.y, size.z);
 
-        scene.add(this.boundingBoxHelper);
+        //scene.add(this.boundingBoxHelper);
     }
     loadAnimations() {
         this.mixer = new THREE.AnimationMixer(this.model.scene);
@@ -70,6 +71,7 @@ class Dinosaurio extends Objeto {
             }
             else{
                 console.log("HIT");
+                firebase.gotDamaged();
                 player.cannonBody.applyImpulse(new CANNON.Vec3(-50000));
                 this.lastAtk = Date.now();
             }

@@ -44,6 +44,12 @@
                     <button id="btn-MediumMode" style="border: solid;">Medio</button>
                     <button id="btn-HardMode">Dificil</button>
                 </div>
+                <div>
+                    <p>Escenario</p>
+                    <button id="btn-LevelPark" style="border: solid;">Parque</button>
+                    <button id="btn-LevelSteel">Fabrica</button>
+                    <button id="btn-LevelWoods">Bosques</button>
+                </div>
             </div>
         </div>
         <div id="modal-Pause" class="modal">
@@ -70,15 +76,20 @@
                 <h2 id="modal-Winner-Name"></h2>
             </div>
         </div>
+        <div id="modal-Loser" class="modal">
+            <div class="contenido-modal">
+                <h1>Has perdido!</h1>
+            </div>
+        </div>
         <div id="gameScreen">
             <div>
                 <select id="selectPartida" size="5">
                     <optgroup label="Partidas">
-
                     </optgroup>
                 </select>
             </div>
-            <div id="game"></div>
+            <div id="game">
+            </div>
         </div>
     </div>
     <div id="footer">

@@ -32,7 +32,7 @@ export class Objeto {
         this.boundingBoxHelper.position.copy(center);
         this.boundingBoxHelper.scale.set(size.x, size.y, size.z);
 
-        scene.add(this.boundingBoxHelper);
+        //scene.add(this.boundingBoxHelper);
     }
 }
 

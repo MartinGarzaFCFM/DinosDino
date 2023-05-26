@@ -25,6 +25,7 @@ var db;
 export var userUID = null;
 export var userName = null;
 var usuariosRef;
+var esteUsuarioJugando;
 var sala;
 
 //Datos
@@ -33,11 +34,18 @@ export var usuarioConectado = null;
 export var inGameState = false;
 export var usuariosEnJuego = {};
 export var huevosEnJuego = {};
+export var speedTiresEnJuego = {};
+export var spraysEnJuego = {};
+export var heartsEnJuego = {};
 export var huevosDeUsuarios = {};
+
+//Datos del Usuario Jugando
+export var hp = 5;
 
 //Datos de Juego
 export var gameState = "";
 export var difficulty = "Medium";
+export var level = "Park";
 export var cantidadHuevos = 0;
 export var playerPosition = null;
 export var playerRotation = null;
@@ -59,20 +67,11 @@ function init() {
 }
 
 export function changeDifficulty(key) {
-    switch (key) {
-        case "Easy":
-            difficulty = key;
-            break;
-        case "Medium":
-            difficulty = key;
-            break;
-        case "Hard":
-            difficulty = key;
-            break;
+    difficulty = key
+}
 
-        default:
-            break;
-    }
+export function changeLevel(key) {
+    level = key
 }
 
 function prepareRefs() {
@@ -124,7 +123,7 @@ function prepareEvents() {
 
 }
 
-function prepareScores(){
+function prepareScores() {
     onValue(ref(db, "Usuarios/"), (snapshot) => {
         huevosDeUsuarios = snapshot.val();
     });
@@ -193,7 +192,8 @@ function createGame(btnStartGame, btnLeaveGame) {
     //GameStartVar
     set(ref(db, "Juegos/" + sala + "/GameState"), {
         gameState: "EnEspera",
-        difficulty: difficulty
+        difficulty: difficulty,
+        level: level
     });
 
     inGameRef = ref(db, "Juegos/" + sala + "/" + "Jugadores/");
@@ -219,6 +219,36 @@ function createGame(btnStartGame, btnLeaveGame) {
         cantidadHuevos++;
     }
 
+    ////SpeedTires Spawn
+    for (let speedTire = 0; speedTire <= 5; speedTire++) {
+        update(ref(db, "Juegos/" + sala + "/" + "SpeedTires/" + speedTire), {
+            speedTireID: speedTire,
+            isCollected: 0,
+            posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
+            posZ: (Math.random() * (1000 - -1000) + -1000).toFixed(4)
+        });
+    }
+
+    ////Sprays Spawn
+    for (let i = 0; i <= 5; i++) {
+        update(ref(db, "Juegos/" + sala + "/" + "Sprays/" + i), {
+            ID: i,
+            isCollected: 0,
+            posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
+            posZ: (Math.random() * (1000 - -1000) + -1000).toFixed(4)
+        });
+    }
+
+    ////Hearts Spawn
+    for (let i = 0; i <= 5; i++) {
+        update(ref(db, "Juegos/" + sala + "/" + "Hearts/" + i), {
+            ID: i,
+            isCollected: 0,
+            posX: (Math.random() * (1000 - -1000) + -1000).toFixed(4),
+            posZ: (Math.random() * (1000 - -1000) + -1000).toFixed(4)
+        });
+    }
+
     //Guardar la cantidad de Huevos creados en Firebase para detectar cuantos hay y cuando se acabaron para determinar ganador.
     update(ref(db, "Juegos/" + sala + "/GameState"), {
         TotalHuevos: cantidadHuevos
@@ -227,6 +257,21 @@ function createGame(btnStartGame, btnLeaveGame) {
     //Detectar el cambio en la tabla de Huevos
     onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
         huevosEnJuego = snapshot.val();
+    });
+
+    //Detectar el cambio en la tabla de SpeedTires
+    onValue(ref(db, "Juegos/" + sala + "/SpeedTires"), (snapshot) => {
+        speedTiresEnJuego = snapshot.val();
+    });
+
+    //Detectar el cambio en la tabla de Sprays
+    onValue(ref(db, "Juegos/" + sala + "/Sprays"), (snapshot) => {
+        spraysEnJuego = snapshot.val();
+    });
+
+    //Detectar el cambio en la tabla de Hearts
+    onValue(ref(db, "Juegos/" + sala + "/Hearts"), (snapshot) => {
+        heartsEnJuego = snapshot.val();
     });
 
     //Detectar si el Juego ha empezado
@@ -238,8 +283,6 @@ function createGame(btnStartGame, btnLeaveGame) {
         if (cantidadHuevos === 0) {
             buscarGanador();
         }
-        console.log("HUEVOS restantes");
-        console.log(cantidadHuevos);
     });
 
     btnStartGame.style.display = "block";
@@ -276,19 +319,34 @@ function joinGame() {
         gameState = snapshot.val();
         cantidadHuevos = gameState.TotalHuevos;
         difficulty = gameState.difficulty;
+        level = gameState.level;
         gameState = gameState.gameState;
 
         if (cantidadHuevos === 0) {
             buscarGanador();
         }
-        console.log("HUEVOS restantes");
-        console.log(cantidadHuevos);
     });
 
     //Detectar el cambio en la tabla de Huevos
     onValue(ref(db, "Juegos/" + sala + "/Huevos"), (snapshot) => {
         huevosEnJuego = snapshot.val();
     });
+
+    //Detectar el cambio en la tabla de SpeedTires
+    onValue(ref(db, "Juegos/" + sala + "/SpeedTires"), (snapshot) => {
+        speedTiresEnJuego = snapshot.val();
+    });
+
+    //Detectar el cambio en la tabla de SpeedTires
+    onValue(ref(db, "Juegos/" + sala + "/Sprays"), (snapshot) => {
+        spraysEnJuego = snapshot.val();
+    });
+
+    //Detectar el cambio en la tabla de SpeedTires
+    onValue(ref(db, "Juegos/" + sala + "/Hearts"), (snapshot) => {
+        heartsEnJuego = snapshot.val();
+    });
+
 }
 
 function startGame() {
@@ -338,6 +396,38 @@ export function gotEgg(huevoID) {
     });
 }
 
+export function gotTire(id) {
+    update(ref(db, "Juegos/" + sala + "/" + "SpeedTires/" + id), {
+        isCollected: 1
+    });
+}
+
+export function gotSpray(id) {
+    update(ref(db, "Juegos/" + sala + "/" + "Sprays/" + id), {
+        isCollected: 1
+    });
+}
+
+export function gotHeart(id) {
+    update(ref(db, "Juegos/" + sala + "/" + "Hearts/" + id), {
+        isCollected: 1
+    });
+
+    update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
+        hp: usuariosEnJuego[userUID].hp + 1
+    });
+
+    hp = usuariosEnJuego[userUID].hp
+}
+
+export function gotDamaged() {
+    update(ref(db, "Juegos/" + sala + "/" + "Jugadores/" + userUID), {
+        hp: usuariosEnJuego[userUID].hp - 1
+    });
+
+    hp = usuariosEnJuego[userUID].hp
+}
+
 function buscarGanador() {
     huevosRecogidos = 0;
     for (let i = 0; i < Object.keys(usuariosEnJuego).length; i++) {
@@ -347,19 +437,21 @@ function buscarGanador() {
             uidGanador = stats.uid;
         }
     }
-    console.log("GANADOR:");
-    console.log(uidGanador);
-    console.log("Puntos: ");
-    console.log(huevosRecogidos);
-
-    console.log(huevosDeUsuarios);
     usuarioGanador = huevosDeUsuarios[uidGanador];
-    console.log(usuarioGanador);
 
-    let totalDeHuevos = usuarioGanador.huevosTotales + huevosRecogidos;
-    update(ref(db, "Usuarios/" + uidGanador), {
-        huevosTotales: totalDeHuevos
-    });
+    if (usuarioGanador.huevosTotales === undefined) {
+        let totalDeHuevos = huevosRecogidos;
+        update(ref(db, "Usuarios/" + uidGanador), {
+            huevosTotales: totalDeHuevos
+        });
+    }
+    else {
+        let totalDeHuevos = usuarioGanador.huevosTotales + huevosRecogidos;
+        update(ref(db, "Usuarios/" + uidGanador), {
+            huevosTotales: totalDeHuevos
+        });
+    }
+
 
     endingGame();
 }

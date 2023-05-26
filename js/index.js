@@ -3,12 +3,15 @@ import * as CANNON from "cannon-es";
 import CannonDebugger from 'cannon-es-debugger';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { huevoCrear } from "./Huevo.js";
+import { speedTireCrear } from "./SpeedTire.js";
 import { carroCrear } from "./Carro.js";
 import { dinosaurioCrear } from "./Dinosaurio.js";
 import { edificioCrear } from "./Edificio.js";
 import { modelLoader } from './loaders/modelLoader.js';
 
 import * as firebase from "./Firebase.js";
+import { sprayCrear } from './Spray.js';
+import { heartCrear } from './Heart.js';
 
 //PATHS
 const assetsPath = "../assets/";
@@ -77,7 +80,7 @@ var jugadoresCargados = false;
 var isPaused = false;
 
 //Valores de Dificultad
-var tRexSpeed = 0.01;
+var tRexSpeed = 0.015;
 var playerSpeed = 5000;
 
 
@@ -89,6 +92,15 @@ var rexy;
 
 var huevos = [];
 var posicionesHuevos = {};
+
+//Speed Tires
+var speedTireBonus = 0;
+var speedTires = [];
+var sprays = [];
+var hearts = [];
+var posicionesSpeedTires = {};
+var posicionesSprays = {};
+var posicionesHearts = {};
 
 //Firebase
 firebase.init();
@@ -107,6 +119,7 @@ const modalScoresClose = document.getElementById("modal-Scores-Close");
 const span = document.getElementsByClassName("cerrar")[0];
 const tableScores = document.getElementById("ScoreTable");
 const modalWinner = document.getElementById("modal-Winner");
+const modalLoser = document.getElementById("modal-Loser");
 var modalWinnerName = document.getElementById("modal-Winner-Name");
 
 //Switches
@@ -114,6 +127,10 @@ const checkboxMusic = document.getElementById("checkbox-Music");
 var btnEasyMode = document.getElementById("btn-EasyMode");
 var btnMediumMode = document.getElementById("btn-MediumMode");
 var btnHardMode = document.getElementById("btn-HardMode");
+
+var btnLevelPark = document.getElementById("btn-LevelPark");
+var btnLevelSteel = document.getElementById("btn-LevelSteel");
+var btnLevelWoods = document.getElementById("btn-LevelWoods");
 
 
 //TODO
@@ -130,7 +147,10 @@ const selectPartida = document.getElementById("selectPartida");
 btnCreateGame.style.display = "none";
 btnJoinGame.style.display = "none";
 
-
+//UI Elements Startup
+var bonusSpeedDiv;
+var healthDiv;
+var eggsDiv;
 
 init();
 async function init() {
@@ -157,11 +177,11 @@ async function init() {
         for (let i = 0; i < Object.keys(firebase.huevosDeUsuarios).length; i++) {
             let usuario = Object.values(firebase.huevosDeUsuarios)[i];
             console.log(usuario);
-            if(usuario.huevosTotales !== undefined){
+            if (usuario.huevosTotales !== undefined) {
                 let tr = document.createElement("tr");
                 let columnName = document.createElement("td");
                 let columnEggs = document.createElement("td");
-                
+
                 let textName = document.createTextNode(usuario.name);
                 let textEggs = document.createTextNode(usuario.huevosTotales);
 
@@ -171,7 +191,7 @@ async function init() {
                 tr.appendChild(columnName);
                 tr.appendChild(columnEggs);
                 table.appendChild(tr);
-            }                        
+            }
         }
         tableScores.appendChild(table);
     });
@@ -223,6 +243,26 @@ async function init() {
         btnHardMode.style.border = "solid";
     });
 
+    ////Escenarios
+    btnLevelPark.addEventListener("click", () => {
+        firebase.changeLevel("Park");
+        btnLevelPark.style.border = "solid";
+        btnLevelSteel.style.border = "none";
+        btnLevelWoods.style.border = "none";
+    });
+    btnLevelSteel.addEventListener("click", () => {
+        firebase.changeLevel("Steel");
+        btnLevelPark.style.border = "none";
+        btnLevelSteel.style.border = "solid";
+        btnLevelWoods.style.border = "none";
+    });
+    btnLevelWoods.addEventListener("click", () => {
+        firebase.changeLevel("Woods");
+        btnLevelPark.style.border = "none";
+        btnLevelSteel.style.border = "none";
+        btnLevelWoods.style.border = "solid";
+    });
+
     btnLogin.addEventListener("click", () => {
         clickSound.play();
         firebase.login(btnCreateGame, btnJoinGame);
@@ -252,7 +292,12 @@ async function init() {
         //Estoy Listo
         await prepararJugadores();
         await prepararHuevos();
+        await prepararSpeedTires();
+        await prepararSprays();
+        await prepararHearts();
         prepararDificultad();
+        prepararEscenario();
+        setupTerreno();
         player.isON = true;
         firebase.iAmReady();
         carEngineStart.play();
@@ -276,10 +321,11 @@ async function init() {
     setupRenderer();
     setupLights()
     setupSkyDome();
-    setupTerreno();
     setupOrbitCamera();
 
     await cargarModelos();
+
+    setupUI();
 
     animate();
 }
@@ -294,13 +340,50 @@ function animate() {
 
     if (firebase.gameState === "Started") {
         cameraFollow = true;
-        if(!isPaused){
+        if (!isPaused) {
             rexy.perseguir(player, tRexSpeed);
             player.update(firebase);
         }
-        else{
+        else {
             player.pausa(firebase);
         }
+
+        //Leer Vida
+        healthDiv.innerHTML = "Vida: " + firebase.hp;
+
+        if (firebase.hp === 0) {
+            modalLoser.style.display = "block";
+        }
+
+        //Leer Huevos
+        eggsDiv.innerHTML = "Huevos Restantes: " + firebase.cantidadHuevos;
+
+        speedTires.forEach((tire) => {
+            tire.collect(player.boundingBox, tire.ID, speedTireBonus, bonusSpeedDiv)
+            if (tire.collected && tire.isOn) {
+                scene.remove(tire.model);
+                tire.isOn = false;
+                tire.boundingBox.makeEmpty();
+            }
+        });
+
+        sprays.forEach((spray) => {
+            spray.collect(player.boundingBox, spray.ID, tRexSpeed)
+            if (spray.collected && spray.isOn) {
+                scene.remove(spray.model);
+                spray.isOn = false;
+                spray.boundingBox.makeEmpty();
+            }
+        });
+
+        hearts.forEach((heart) => {
+            heart.collect(player.boundingBox, heart.ID,)
+            if (heart.collected && heart.isOn) {
+                scene.remove(heart.model);
+                heart.isOn = false;
+                heart.boundingBox.makeEmpty();
+            }
+        });
 
         huevos.forEach((huevo) => {
             huevo.collect(player.boundingBox, huevo.ID);
@@ -311,6 +394,9 @@ function animate() {
             }
         });
         if (otrosJugadores.length !== 0) playOthers();
+        playSpeedTires();
+        playHearts();
+        playSprays();
         playHuevos();
     }
 
@@ -361,6 +447,51 @@ async function playHuevos() {
     }
 }
 
+async function playSpeedTires() {
+    posicionesSpeedTires = firebase.speedTiresEnJuego;
+
+    let keys = Object.keys(posicionesSpeedTires);
+
+    for (let i = 0; i < keys.length; i++) {
+        let posicion = Object.values(posicionesSpeedTires)[i];
+        speedTires.forEach((tire) => {
+            if (tire.ID === posicion.speedTireID && posicion.isCollected === 1) {
+                tire.remove();
+            }
+        });
+    }
+}
+
+async function playSprays() {
+    posicionesSprays = firebase.spraysEnJuego;
+
+    let keys = Object.keys(posicionesSprays);
+
+    for (let i = 0; i < keys.length; i++) {
+        let posicion = Object.values(posicionesSprays)[i];
+        sprays.forEach((spray) => {
+            if (spray.ID === posicion.ID && posicion.isCollected === 1) {
+                spray.remove();
+            }
+        });
+    }
+}
+
+async function playHearts() {
+    posicionesHearts = firebase.heartsEnJuego;
+
+    let keys = Object.keys(posicionesHearts);
+
+    for (let i = 0; i < keys.length; i++) {
+        let posicion = Object.values(posicionesHearts)[i];
+        hearts.forEach((heart) => {
+            if (heart.ID === posicion.ID && posicion.isCollected === 1) {
+                heart.remove();
+            }
+        });
+    }
+}
+
 async function prepararJugadores() {
     posicionesJugadores = firebase.usuariosEnJuego;
 
@@ -374,7 +505,7 @@ async function prepararJugadores() {
             otrosJugadores.push(newCarro);
         }
         else {
-            player.load(scene, physicsWorld, { x: posicion.posX, y: 10, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
+            player.load(scene, physicsWorld, { x: posicion.posX, y: 20, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, wheelMaterial);
         }
     }
 
@@ -395,6 +526,43 @@ async function prepararHuevos() {
     }
 }
 
+async function prepararSpeedTires() {
+    posicionesSpeedTires = firebase.speedTiresEnJuego;
+
+    for (let i = 0; i < Object.keys(posicionesSpeedTires).length; i++) {
+        let posicion = Object.values(posicionesSpeedTires)[i];
+        let newSpeedTire = await speedTireCrear(`${assetsPath}modelos/tire.fbx`);
+        newSpeedTire.ID = posicion.speedTireID;
+        newSpeedTire.load(scene, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, { x: 0.1, y: 0.1, z: 0.1 });
+        speedTires.push(newSpeedTire);
+    }
+}
+
+async function prepararSprays() {
+    posicionesSprays = firebase.spraysEnJuego;
+
+    for (let i = 0; i < Object.keys(posicionesSprays).length; i++) {
+        let posicion = Object.values(posicionesSprays)[i];
+        let newModel = await sprayCrear(`${assetsPath}modelos/Spray.fbx`);
+        newModel.ID = posicion.ID;
+        newModel.load(scene, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, { x: 0.1, y: 0.1, z: 0.1 });
+        sprays.push(newModel);
+    }
+}
+
+async function prepararHearts() {
+    posicionesHearts = firebase.heartsEnJuego;
+
+    for (let i = 0; i < Object.keys(posicionesHearts).length; i++) {
+        let posicion = Object.values(posicionesHearts)[i];
+        let newModel = await heartCrear(`${assetsPath}modelos/Heart.fbx`);
+        newModel.ID = posicion.ID;
+        newModel.load(scene, { x: posicion.posX, y: 0, z: posicion.posZ }, { x: 0, y: 0, z: 0 }, { x: 0.1, y: 0.1, z: 0.1 });
+        hearts.push(newModel);
+    }
+}
+
+
 async function prepararDificultad() {
     switch (firebase.difficulty) {
         case "Easy":
@@ -414,6 +582,25 @@ async function prepararDificultad() {
     }
 }
 
+async function prepararEscenario() {
+    switch (firebase.level) {
+        case "Park":
+            setupPark();
+            break;
+
+        case "Steel":
+            setupSteel();
+            break;
+
+        case "Woods":
+            setupWoods();
+            break;
+
+        default:
+            break;
+    }
+}
+
 document.addEventListener('keydown', (event) => {
     const maxSteerVal = 0.9;
     const brakeForce = 200;
@@ -421,14 +608,14 @@ document.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'w':
         case 'ArrowUp':
-            player.control.applyEngineForce(-playerSpeed, 2);
-            player.control.applyEngineForce(-playerSpeed, 3);
+            player.control.applyEngineForce(-playerSpeed + speedTireBonus, 2);
+            player.control.applyEngineForce(-playerSpeed + speedTireBonus, 3);
             break;
 
         case 's':
         case 'ArrowDown':
-            player.control.applyEngineForce(playerSpeed, 2);
-            player.control.applyEngineForce(playerSpeed, 3);
+            player.control.applyEngineForce(playerSpeed + speedTireBonus, 2);
+            player.control.applyEngineForce(playerSpeed + speedTireBonus, 3);
             break;
 
         case 'a':
@@ -511,6 +698,18 @@ function followPlayer() {
 
 
 async function cargarModelos() {
+    //Dinosaurios
+    rexy = await dinosaurioCrear(`${assetsPath}modelos/Rexy/Rexy.gltf`);
+    rexy.load(
+        scene,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        { x: 2, y: 2, z: 2 }
+    );
+    rexy.loadAnimations();
+}
+
+async function setupPark() {
     //Edificios
     const laboratorio = await edificioCrear(`${assetsPath}modelos/Edificios/Lab.fbx`);
     laboratorio.load(
@@ -538,32 +737,55 @@ async function cargarModelos() {
         { x: 0, y: Math.PI / 90, z: 0 },
         { x: 1, y: 1, z: 1 }
     );
+}
 
-    //Dinosaurios
-    rexy = await dinosaurioCrear(`${assetsPath}modelos/Rexy/Rexy.gltf`);
-    rexy.load(
-        scene,
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
-        { x: 2, y: 2, z: 2 }
-    );
-    rexy.loadAnimations();
-    /*
- 
-    //Traps
-    const trampa = new Objeto(
+async function setupSteel() {
+    const factory = await edificioCrear(`${assetsPath}modelos/Factory.fbx`);
+    factory.load(
         scene,
         physicsWorld,
-        `${assetsPath}modelos/Trampa.fbx`,
-        new THREE.Vector3(22, 22, 22),
-        new THREE.Vector3(800, 0, 800),
-        new THREE.Vector3(0, Math.PI / 90, 0)
+        { x: -80, y: 0, z: -200 },
+        { x: 0, y: Math.PI / 90, z: 0 },
+        { x: 1, y: 1, z: 1 }
     );
-    */
+
+    const factory2 = await edificioCrear(`${assetsPath}modelos/Factory2.fbx`);
+    factory2.load(
+        scene,
+        physicsWorld,
+        { x: 80, y: 0, z: 200 },
+        { x: 0, y: Math.PI / 90, z: 0 },
+        { x: 1, y: 1, z: 1 }
+    );
+}
+
+async function setupWoods() {
+    const casabosque = await edificioCrear(`${assetsPath}modelos/Factory2.fbx`);
+    casabosque.load(
+        scene,
+        physicsWorld,
+        { x: 80, y: 0, z: 200 },
+        { x: 0, y: Math.PI / 90, z: 0 },
+        { x: 1, y: 1, z: 1 }
+    );
 }
 
 function setupTerreno() {
-    let planeTexture = textureLoader.load(`${assetsPath}texturas/suelo.jpg`);
+    let planeTexture;
+    switch (firebase.level) {
+        case "Park":
+            planeTexture = textureLoader.load(`${assetsPath}texturas/suelo.jpg`);
+            break;
+        case "Steel":
+            planeTexture = textureLoader.load(`${assetsPath}texturas/metal_plate_diff_1k.jpg`);
+            break;
+        case "Woods":
+            planeTexture = textureLoader.load(`${assetsPath}texturas/coast_sand_rocks_02_diff_1k.jpg`);
+            break;
+
+        default:
+            break;
+    }
     planeTexture.wrapS = planeTexture.wrapT = THREE.RepeatWrapping;
     planeTexture.repeat.set(10, 10);
     const planeGeometry = new THREE.PlaneGeometry(2000, 2000, 10, 10);
@@ -631,7 +853,33 @@ function setupRenderer() {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(720, 480);
     renderer.shadowMap.enabled = true;
-    canvasDiv.replaceWith(renderer.domElement);
+    canvasDiv.replaceWith(renderer.domElement)
+}
+
+function setupUI() {
+    //UI del JUEGO
+    let gameCanvas = document.getElementById("gameScreen");
+    const divHP = document.createElement("div");
+    divHP.id = "HP";
+    divHP.innerText = "Vida: 5";
+    gameCanvas.appendChild(divHP);
+
+    //BonusSpeed
+    const divBonusSpeed = document.createElement("div");
+    divBonusSpeed.id = "div-BonusSpeed";
+    divBonusSpeed.innerText = "Speed: 0";
+    gameCanvas.appendChild(divBonusSpeed);
+
+    //HuevosRestantes
+    const divHuevosRestantes = document.createElement("div");
+    divHuevosRestantes.id = "div-HuevosRestantes";
+    divHuevosRestantes.innerText = "Huevos Restantes: 0";
+    gameCanvas.appendChild(divHuevosRestantes);
+
+    healthDiv = document.getElementById("HP");
+    bonusSpeedDiv = document.getElementById("div-BonusSpeed");
+    eggsDiv = document.getElementById("div-HuevosRestantes");
+
 }
 
 function setupCamera() {
@@ -727,7 +975,15 @@ function setupCannon() {
     //physicsWorld.addBody(groundBody);
 
     //CANNON DEBUGGER
-    cannonDebugger = new CannonDebugger(scene, physicsWorld);
+    cannonDebugger = new CannonDebugger(scene, physicsWorld, {
+        onInit(body, mesh){
+            document.addEventListener("keyup", (event) => {
+                if (event.key === '0'){
+                    mesh.visible = !mesh.visible;
+                }
+            });
+        }
+    });
 }
 
 function onWindowResize() {

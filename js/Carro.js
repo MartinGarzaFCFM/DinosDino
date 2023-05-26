@@ -45,7 +45,7 @@ export class Carro extends Objeto {
         this.boundingBox = new THREE.Box3().setFromObject(this.model);
         this.boundingBoxHelper = new THREE.Box3Helper(this.boundingBox, 0xffff00);
 
-        scene.add(this.boundingBoxHelper);
+        //scene.add(this.boundingBoxHelper);
 
         //Actualizar Helper del Bounding Box
         this.boundingBox.setFromObject(this.model);

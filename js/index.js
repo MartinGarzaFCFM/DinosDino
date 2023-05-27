@@ -152,7 +152,11 @@ var bonusSpeedDiv;
 var healthDiv;
 var eggsDiv;
 
+//FB APP
+
+
 init();
+
 async function init() {
     //window.addEventListener("resize", onWindowResize, false);
 
@@ -976,9 +980,9 @@ function setupCannon() {
 
     //CANNON DEBUGGER
     cannonDebugger = new CannonDebugger(scene, physicsWorld, {
-        onInit(body, mesh){
+        onInit(body, mesh) {
             document.addEventListener("keyup", (event) => {
-                if (event.key === '0'){
+                if (event.key === '0') {
                     mesh.visible = !mesh.visible;
                 }
             });

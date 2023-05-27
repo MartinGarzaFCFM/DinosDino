@@ -17,7 +17,10 @@
         <a href="#" id="btn-Tutorial"><img class="btnplay" src="./assets/imagenes/BtnTutorial.png"></a>
     </div>
     <div id="glcanvas">
+
         <div id="gameButtons">
+            <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+            </fb:login-button>
             <button id="btn-login">Inicio de Sesion</button>
             <button id="btn-out">Cierre de Sesion</button>
             <button id="btn-createGame">Crear Partida</button>
@@ -95,8 +98,58 @@
     <div id="footer">
         <p class="fix-stroke"> 2023 - Graficas en la web. <br> Karla, Martín y Regulo</p>
     </div>
-
 </body>
+
+<script>
+    window.fbAsyncInit = function () {
+        FB.init({
+            appId: '1388240898687107',
+            autoLogAppEvents: true,
+            xfbml: true,
+            version: 'v17.0'
+        });
+
+        FB.AppEvents.logPageView();
+
+        FB.getLoginStatus(function (response) {
+            statusChangeCallback(response);
+        });
+
+        FB.ui({
+            method: 'share',
+            href: 'https://developers.facebook.com/docs/'
+        }, function (response) { });
+
+        FB.api(
+            "/10222314006108156/posts",
+            function (response) {
+                if (response && !response.error) {
+                    console.log(response);
+                }
+            }
+        );
+
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+
+    };
+
+    function checkLoginState() {
+        FB.getLoginStatus(function (response) {
+            statusChangeCallback(response);
+        });
+    }
+
+
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
 <script type="module" src="./js/index.js"></script>
 
 </html>

@@ -1,5 +1,5 @@
 html {
-    background: url("../assets/fondoHojas-NoEfecto.png") no-repeat center center fixed;
+    background: url("../assets/imagenes/fondoHojas-NoEfecto.png") no-repeat center center fixed;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
@@ -7,10 +7,10 @@ html {
 }
 
 body {
+    display: flex;
+    flex-direction: column;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    color: beige;
-    margin: 0px;
-    background: url("../assets/fondoHojas-NoEfecto.png") no-repeat center center fixed;
+    background: url("../assets/imagenes/fondoHojas-NoEfecto.png") no-repeat center center fixed;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
@@ -18,28 +18,76 @@ body {
 }
 
 #header,
-#main,
+#glcanvas,
 #footer {
     display: flex;
-    margin: 0;
+    justify-content: space-evenly;
+    margin: 0px;
 }
 
 #header {
-    height: 5em;
-    justify-content: space-between;
-   
-    
-}
-
-#main {
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(0, 0, 0, 0.500);
-    padding: 1em;
+    justify-content: space-evenly;
 }
 
 #glcanvas {
-    background: url("../assets/TiranoBoca-Efecto.png") no-repeat center center fixed;
+    display: flex;
+    flex-direction: column;
+}
+
+#gameButtons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+#gameScreen {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    position: relative;
+}
+
+#HP{
+    color: white;
+    position: absolute;
+    top: 0%;
+    left: 30%;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+#HP div{
+    margin: 0;
+}
+
+#div-BonusSpeed{
+    position: absolute;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    top: 0%;
+    left: 70%;
+    font-weight: bold;
+}
+
+#div-HuevosRestantes{
+    position: absolute;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    top: 90%;
+    left: 63%;
+    font-weight: bold;
+}
+
+.btnplay {
+    width: 100px;
+    height: 100px;
+}
+
+#selectPartida {
+    width: 10em;
+    height: 20em;
 }
 
 #footer {
@@ -53,29 +101,203 @@ body {
 
 .fix-stroke {
     paint-order: stroke fill;
- }
- 
-
+}
 
 img:hover {
     /* Start the shake animation and make the animation last for 0.5 seconds */
     animation: shake 0.5s;
-    background:url('https://media.tenor.com/EDkwc6V_2lcAAAAj/leaves.gif');
+    background: url('https://media.tenor.com/EDkwc6V_2lcAAAAj/leaves.gif');
     /* When the animation is finished, start again */
     animation-iteration-count: infinite;
-  }
-  
-  @keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(3px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    60% { transform: translate(-3px, 1px) rotate(0deg); }
-    70% { transform: translate(3px, 1px) rotate(-1deg); }
-    80% { transform: translate(-1px, -1px) rotate(1deg); }
-    90% { transform: translate(1px, 2px) rotate(0deg); }
-    100% { transform: translate(1px, -2px) rotate(-1deg); }
-  }
+}
 
+@keyframes shake {
+    0% {
+        transform: translate(1px, 1px) rotate(0deg);
+    }
+
+    10% {
+        transform: translate(-1px, -2px) rotate(-1deg);
+    }
+
+    20% {
+        transform: translate(-3px, 0px) rotate(1deg);
+    }
+
+    30% {
+        transform: translate(3px, 2px) rotate(0deg);
+    }
+
+    40% {
+        transform: translate(1px, -1px) rotate(1deg);
+    }
+
+    50% {
+        transform: translate(-1px, 2px) rotate(-1deg);
+    }
+
+    60% {
+        transform: translate(-3px, 1px) rotate(0deg);
+    }
+
+    70% {
+        transform: translate(3px, 1px) rotate(-1deg);
+    }
+
+    80% {
+        transform: translate(-1px, -1px) rotate(1deg);
+    }
+
+    90% {
+        transform: translate(1px, 2px) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(1px, -2px) rotate(-1deg);
+    }
+}
+
+/* Fondo modal: negro con opacidad al 50% */
+.modal {
+    display: none;
+    /* Por defecto, estará oculto */
+    position: fixed;
+    /* Posición fija */
+    z-index: 1;
+    /* Se situará por encima de otros elementos de la página*/
+    padding-top: 200px;
+    /* El contenido estará situado a 200px de la parte superior */
+    left: 0;
+    top: 0;
+    width: 100%;
+    /* Ancho completo */
+    height: 100%;
+    /* Algura completa */
+    overflow: auto;
+    /* Se activará el scroll si es necesario */
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Color negro con opacidad del 50% */
+}
+
+/* Ventana o caja modal */
+.contenido-modal {
+    position: relative;
+    /* Relativo con respecto al contenedor -modal- */
+    background-color: white;
+    margin: auto;
+    /* Centrada */
+    padding: 20px;
+    width: 60%;
+    -webkit-animation-name: animarsuperior;
+    -webkit-animation-duration: 0.5s;
+    animation-name: animarsuperior;
+    animation-duration: 0.5s
+}
+
+/* Animación */
+@-webkit-keyframes animatetop {
+    from {
+        top: -300px;
+        opacity: 0
+    }
+
+    to {
+        top: 0;
+        opacity: 1
+    }
+}
+
+@keyframes animarsuperior {
+    from {
+        top: -300px;
+        opacity: 0
+    }
+
+    to {
+        top: 0;
+        opacity: 1
+    }
+}
+
+/* Botón cerrar */
+.close {
+    color: black;
+    float: right;
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* The slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: #2196F3;
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked+.slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+table, th, td {
+    border: 1px solid black;
+  }

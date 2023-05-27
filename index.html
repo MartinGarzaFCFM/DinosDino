@@ -7,50 +7,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dinos Dino</title>
     <link rel="stylesheet" href="./css/index.css" type="text/css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
-        integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
-        crossorigin="anonymous" defer></script>
-    <script src="./js/webgl-demo.js" type="module" defer></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-
-    
 </head>
 
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-2">
-                <p></p>
-            </div>
-            <div class="col-md-8">
-                <div id="header">
-                    <a href="play.html"><img class="btnplay"src="./assets/BtnPlay.png" width="100" height="100"></a>
-                    <a href="play.html"><img class="btnplay"src="./assets/BtnSettings.png" width="100" height="100"></a>
-                    <a href="play.html"><img class="btnplay"src="./assets/BtnScores.png" width="100" height="100"></a>
-                    <a href="play.html"><img class="btnplay"src="./assets/BtnTutorial.png" width="100" height="100"></a>
+    <div id="header">
+        <a href="#" id="btn-Play"><img class="btnplay" src="./assets/imagenes/BtnPlay.png"></a>
+        <a href="#" id="btn-Settings"><img class="btnplay" src="./assets/imagenes/BtnSettings.png"></a>
+        <a href="#" id="btn-Scores"><img class="btnplay" src="./assets/imagenes/BtnScores.png"></a>
+        <a href="#" id="btn-Tutorial"><img class="btnplay" src="./assets/imagenes/BtnTutorial.png"></a>
+    </div>
+    <div id="glcanvas">
 
+        <div id="gameButtons">
+            <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+            </fb:login-button>
+            <button id="btn-login">Inicio de Sesion</button>
+            <button id="btn-out">Cierre de Sesion</button>
+            <button id="btn-createGame">Crear Partida</button>
+            <button id="btn-joinGame">Unirse a Partida</button>
+            <button id="btn-leaveGame">Abandonar la Partida</button>
+            <button id="btn-startGame">Empezar Partida</button>
+            <button id="btn-iAmReady">Estoy Listo</button>
+        </div>
+        <!--Ventanas Modales para los botones en la parte superior-->
+        <div id="modal-Settings" class="modal">
+            <div class="contenido-modal">
+                <span class="cerrar">&times;</span>
+                <h2>Opciones</h2>
+                <div>
+                    <p>Musica</p>
+                    <label class="switch">
+                        <input type="checkbox" id="checkbox-Music" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div>
+                    <p>Dificultad</p>
+                    <button id="btn-EasyMode">Facil</button>
+                    <button id="btn-MediumMode" style="border: solid;">Medio</button>
+                    <button id="btn-HardMode">Dificil</button>
+                </div>
+                <div>
+                    <p>Escenario</p>
+                    <button id="btn-LevelPark" style="border: solid;">Parque</button>
+                    <button id="btn-LevelSteel">Fabrica</button>
+                    <button id="btn-LevelWoods">Bosques</button>
                 </div>
             </div>
-            <div class="col-md-2">
+        </div>
+        <div id="modal-Pause" class="modal">
+            <div class="contenido-modal">
+                <span class="cerrar">&times;</span>
+                <h2>Opciones</h2>
+                <div>
+                    <h1>PAUSA</h1>
+                </div>
+            </div>
+        </div>
+        <div id="modal-Scores" class="modal">
+            <div class="contenido-modal">
+                <span id="modal-Scores-Close">&times;</span>
+                <h2>Puntuaciones</h2>
+                <div id="ScoreTable">
+                    <h1>Puntuaciones</h1>
+                </div>
+            </div>
+        </div>
+        <div id="modal-Winner" class="modal">
+            <div class="contenido-modal">
+                <h1>Ganador!</h1>
+                <h2 id="modal-Winner-Name"></h2>
+            </div>
+        </div>
+        <div id="modal-Loser" class="modal">
+            <div class="contenido-modal">
+                <h1>Has perdido!</h1>
+            </div>
+        </div>
+        <div id="gameScreen">
+            <div>
+                <select id="selectPartida" size="5">
+                    <optgroup label="Partidas">
+                    </optgroup>
+                </select>
+            </div>
+            <div id="game">
             </div>
         </div>
     </div>
-   
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <div id="glcanvas">
-                    <canvas id="glcanvas" width="840" height="480"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-   
     <div id="footer">
         <p class="fix-stroke"> 2023 - Graficas en la web. <br> Karla, Martín y Regulo</p>
     </div>
 </body>
+
+<script>
+    window.fbAsyncInit = function () {
+        FB.init({
+            appId: '1388240898687107',
+            autoLogAppEvents: true,
+            xfbml: true,
+            version: 'v17.0'
+        });
+
+        FB.AppEvents.logPageView();
+
+        FB.getLoginStatus(function (response) {
+            statusChangeCallback(response);
+        });
+
+        FB.ui({
+            method: 'share',
+            href: 'https://developers.facebook.com/docs/'
+        }, function (response) { });
+
+        FB.api(
+            "/10222314006108156/posts",
+            function (response) {
+                if (response && !response.error) {
+                    console.log(response);
+                }
+            }
+        );
+
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+
+    };
+
+    function checkLoginState() {
+        FB.getLoginStatus(function (response) {
+            statusChangeCallback(response);
+        });
+    }
+
+
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
+<script type="module" src="./js/index.js"></script>
 
 </html>

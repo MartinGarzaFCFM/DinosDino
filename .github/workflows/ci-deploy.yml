@@ -42,18 +42,18 @@ jobs:
         run: npm run build
 
       - name: 🗺️ Calibrate Island Evacuation Coordinates (Configure GitHub Pages)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: 📦 Crate Jurassic Specimens for Transit (Upload Pages Artifact)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
   airdrop-to-isla-nublar:
     name: 🚁 Air-Drop Remake to Isla Nublar (Deploy to GitHub Pages)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: dino-containment-check
     runs-on: ubuntu-latest
     permissions:

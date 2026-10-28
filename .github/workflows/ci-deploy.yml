@@ -1,0 +1,68 @@
+name: Jurassic CI/CD — Park Perimeter Defense & Island Deployment
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Default read-only permissions; elevated Pages permissions are scoped strictly to the deploy job
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same PR branch, while allowing main deployments to finish cleanly
+concurrency:
+  group: "jurassic-ci-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  dino-containment-check:
+    name: 🦖 Rexy Perimeter & Integrity Protocol
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧬 Extract Dinosaur DNA (Checkout code)
+        uses: actions/checkout@v4
+
+      - name: 🍖 Feed the Raptors (Setup Node.js)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 🧰 Provision Expedition Supplies (npm ci)
+        run: npm ci
+
+      - name: ⚡ Inspect Electric Fence Integrity (Strict TypeScript Typecheck)
+        run: npx tsc --noEmit
+
+      - name: 🚜 Assemble Armored Vehicle & Fortify Buildings (Vite Production Build)
+        run: npm run build
+
+      - name: 🗺️ Calibrate Island Evacuation Coordinates (Configure GitHub Pages)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: 📦 Crate Jurassic Specimens for Transit (Upload Pages Artifact)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  airdrop-to-isla-nublar:
+    name: 🚁 Air-Drop Remake to Isla Nublar (Deploy to GitHub Pages)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dino-containment-check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 🏝️ Open Park Gates & Welcome Visitors (Deploy to GitHub Pages)
+        id: deployment
+        uses: actions/deploy-pages@v4

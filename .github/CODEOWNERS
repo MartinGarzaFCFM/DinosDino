@@ -1,0 +1,12 @@
+# Default owner for everything in the repository
+* @MartinGarzaFCFM
+
+# Core engine, physics, entities, and UI source code
+/src/ @MartinGarzaFCFM
+
+# CI/CD workflows & repository configuration
+/.github/ @MartinGarzaFCFM
+/vite.config.ts @MartinGarzaFCFM
+/tsconfig.json @MartinGarzaFCFM
+/package.json @MartinGarzaFCFM
+

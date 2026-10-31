@@ -23,8 +23,11 @@ export interface IPickupTarget {
  */
 export interface ICombatTarget {
   readonly position: THREE.Vector3;
+  getVelocity(out: THREE.Vector3): void;
   takeRexyHit(amount: number, hitDirection: THREE.Vector3): void;
   pushFromRexy(pushDirection: THREE.Vector3, strength?: number): void;
+  applyTractionDisruption?(durationSeconds: number): void;
+  applyStun?(durationSeconds: number): void;
 }
 
 /**

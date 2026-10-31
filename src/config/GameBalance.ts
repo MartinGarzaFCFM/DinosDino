@@ -7,13 +7,15 @@ export interface DifficultyPreset {
 }
 
 export const DIFFICULTY_PRESETS: Record<Difficulty, DifficultyPreset> = {
-  Easy: { rexySpeed: 12, vehicleSpeed: 7000, eggCount: 4 },
-  Medium: { rexySpeed: 17, vehicleSpeed: 6200, eggCount: 6 },
-  Hard: { rexySpeed: 23, vehicleSpeed: 5500, eggCount: 8 }
+  // Player hyper-speed cruising ~245-275 km/h; Rexy base ~165 to 210 km/h; Rexy sprint ~240 to 300 km/h
+  Easy: { rexySpeed: 46.0, vehicleSpeed: 275, eggCount: 4 },
+  Medium: { rexySpeed: 52.0, vehicleSpeed: 260, eggCount: 6 },
+  Hard: { rexySpeed: 58.0, vehicleSpeed: 245, eggCount: 8 }
 };
 
 export const ARENA_CONFIG = {
   terrainSize: 1600,
+  arenaDriveBound: 780,
   wallHeight: 40,
   wallThickness: 10,
   pickupSpawnBound: 350,
@@ -26,52 +28,77 @@ export const ARENA_CONFIG = {
 export const VEHICLE_CONFIG = {
   modelUrl: '/assets/modelos/Carro/carro.gltf',
   modelScale: 4,
-  chassisSize: { x: 5.6, y: 2.6, z: 12 },
-  mass: 550,
-  linearDamping: 0.15,
-  angularDamping: 0.45,
-  centerOfMassOffsetY: -0.4,
-  spawnElevationOffset: 3,
+  chassisSize: { x: 5.6, y: 2.2, z: 11.2 },
+  rideHeight: 1.1,             // Ground offset clearance for wheels/tracks
   maxHealth: 5,
-  baseEngineForce: 6500,
-  maxSteerVal: 0.55,
-  brakeForce: 220,
-  wheel: {
-    radius: 1.35,
-    halfWidth: 2.4,
-    halfLength: 4.4,
-    axleY: -0.55,
-    suspensionStiffness: 40,
-    suspensionRestLength: 0.55,
-    frictionSlip: 3.8,
-    dampingRelaxation: 2.8,
-    dampingCompression: 4.2,
-    maxSuspensionForce: 16000,
-    rollInfluence: 0.05,
-    maxSuspensionTravel: 0.35
-  },
+
+  // Arcade Driving Dynamics (High Speed, Heavy Drift & Ballistic Airtime)
+  maxSpeedKmh: 260,            // Base cruising speed on flat terrain (km/h) (tunable up to 420 km/h)
+  maxReverseSpeedKmh: 65,      // Reverse speed limit (km/h)
+  acceleration: 36.0,          // m/s²: Explosive, punchy throttle thrust (0 to 100 km/h in < 0.8s)
+  launchBoost: 2.4,            // Low-speed punch multiplier off the line (0 to 65% of top speed)
+  brakeDecel: 54.0,            // m/s²: Active stopping power matching hyper cruising speeds
+  coastDecel: 7.0,             // m/s²: Natural rolling resistance when releasing throttle
+  turnSpeed: 1.85,             // rad/sec: Lower sensitivity for weighted, stable cornering
+  driftGrip: 9.0,              // Base lateral grip; dynamically slips at high speeds for realistic drift
+  handbrakeGrip: 2.8,          // Drift grip when holding space/handbrake (allows power-sliding)
+  gravity: 38.0,               // m/s²: Realistic downward gravity for jumps/launches
+
   rexyHit: {
-    elevationKick: 1.5,
-    horizontalSpeed: 75,
-    verticalLift: 45,
-    pitchTorque: 16,
-    yawTorque: 12,
-    rollTorque: 16
-  }
+    horizontalSpeed: 125,       // Visceral, extreme ballistic knockback thrust
+    verticalLift: 24,           // Massive dramatic airborne launch
+    yawTorque: 8
+  },
+  damageGraceDuration: 2.5,     // Post-hit invulnerability grace (seconds)
+  adrenalineBoostDuration: 2.5, // Emergency launch boost window after taking damage (seconds)
+  adrenalineTorqueMultiplier: 2.0 // Extra launch torque multiplier during adrenaline surge
 } as const;
 
 export const REXY_CONFIG = {
   modelUrl: '/assets/modelos/Rexy/Rexy.gltf',
   animationClipName: 'Bip001|Take 001|BaseLayer',
   scale: 2.4,
-  minSpeed: 9,
-  detectionRange: 800,
-  attackRange: 38,
-  bodyTouchRadius: 26,
-  bodyShoveStrength: 38,
-  attackCooldown: 1.2,
-  turnLerpSpeed: 3.5,
-  hitUpwardBias: 0.55
+  baseSpeed: 52.0,              // Cruising pursuit locomotion velocity (~187 km/h)
+  minSpeed: 38.0,
+  detectionRange: 1200,
+  attackRange: 42,
+  bodyTouchRadius: 28,
+  bodyShoveStrength: 95,        // Massive physical body shove launching the player way farther
+  attackCooldown: 3.0,          // Minimum interval between successive bite attacks
+  postAttackRecoveryDuration: 2.5, // Predator pause/triumph delay after landing a hit (seconds)
+  turnLerpSpeed: 4.5,          // Snappy turning to cut off high-speed evasion maneuvers
+  hitUpwardBias: 0.55,
+
+  // --- Target leading (predictive intercept) ---
+  leadTimeMin: 0.3,
+  leadTimeMax: 2.0,
+
+  // --- Sprint Lunge Burst ---
+  sprintMultiplier: 1.45,      // Bursts up to ~271 km/h to overtake player!
+  sprintDuration: 2.6,
+  sprintCooldown: 7.0,
+  sprintTriggerDistance: 130,
+
+  // --- Post-sprint exhaustion window ---
+  exhaustionDuration: 1.4,
+  exhaustionSpeedMultiplier: 0.75,
+
+  // --- Enraged Mode ---
+  enragedSpeedMultiplier: 1.25,// +25% permanent base speed when enraged!
+  enragedSprintMultiplier: 1.45,
+
+  // --- Distant Pursuit Roar & Acoustic EMP Shockwave ---
+  roarMinDistance: 45,         // Roars across arena
+  roarMaxDistance: 500,
+  roarInitialWarmup: 12.0,     // Gives player 12s opening buffer to drive and build speed
+  roarCooldown: 16.0,          // Periodic roar during chase
+  roarCastDuration: 2.8,       // 2.8s telegraph cast bar for player to react and escape
+  roarStunDuration: 2.0,       // Shuts down engine and stalls vehicle for 2.0s
+  roarShockwaveRadius: 480,    // 480m massive shockwave blast
+
+  // --- Obstacle Avoidance Raycast Whiskers ---
+  whiskerDistance: 50,
+  whiskerAngle: 0.52           // ~30 degrees in radians
 } as const;
 
 export const PICKUP_DEFAULTS = {
@@ -80,8 +107,8 @@ export const PICKUP_DEFAULTS = {
   bobAmplitude: 0.7,
   bobFrequency: 2.5,
   spinSpeed: 2.0,
-  speedTireBonus: 600,
-  spraySlowAmount: 3.5,
+  speedTireBonus: 15,          // +15 km/h permanent top speed boost per tire
+  spraySlowAmount: 4.0,        // 4.0 m/s (~14.4 km/h) speed reduction on Rexy
   heartHealAmount: 1,
   counts: {
     speedTires: 4,
@@ -89,4 +116,3 @@ export const PICKUP_DEFAULTS = {
     hearts: 3
   }
 } as const;
-

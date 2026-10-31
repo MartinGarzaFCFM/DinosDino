@@ -1,18 +1,17 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 import { Entity, IDebuggable } from '../Entity.ts';
-import { PhysicsWorld } from '../../physics/PhysicsWorld.ts';
 import { AssetLoader, IAssetLoader } from '../../graphics/AssetLoader.ts';
 import { BuildingBlueprint, BuildingMaterialOverride } from '../../config/LevelRegistry.ts';
 import { createWireframeBox, ensureBoxUVs } from '../../graphics/GeometryUtils.ts';
 
 export class Building extends Entity implements IDebuggable {
-  public cannonBody?: CANNON.Body;
+  /** Union AABB used for fast broadphase & pickup spawn clearance */
   public readonly boundingBox: THREE.Box3 = new THREE.Box3();
+  /** Individual world-space compound AABBs (preserves L-shaped open porches like Cabin.fbx) */
+  public readonly colliderBoxes: THREE.Box3[] = [];
   private readonly debugWireframeGroup: THREE.Group = new THREE.Group();
 
   private readonly blueprint: BuildingBlueprint;
-  private readonly physics: PhysicsWorld;
   private readonly loader: IAssetLoader;
   private readonly scale: THREE.Vector3;
   private readonly rotationY: number;
@@ -24,7 +23,6 @@ export class Building extends Entity implements IDebuggable {
     spawnPos: THREE.Vector3,
     rotationY: number,
     scale: THREE.Vector3,
-    physics: PhysicsWorld,
     loader: IAssetLoader = AssetLoader.getInstance()
   ) {
     super(id);
@@ -32,7 +30,6 @@ export class Building extends Entity implements IDebuggable {
     this.spawnPos = spawnPos;
     this.rotationY = rotationY;
     this.scale = scale;
-    this.physics = physics;
     this.loader = loader;
 
     this.debugWireframeGroup.visible = false;
@@ -61,22 +58,10 @@ export class Building extends Entity implements IDebuggable {
 
       this.group.add(mesh);
 
-      // Build static compound physics body & matching debug outlines
-      this.cannonBody = new CANNON.Body({
-        type: CANNON.Body.STATIC,
-        material: this.physics.groundMaterial
-      });
-      this.cannonBody.position.set(this.spawnPos.x, this.spawnPos.y, this.spawnPos.z);
-      this.cannonBody.quaternion.setFromEuler(0, this.rotationY, 0);
-
       const collisionBoxes = this.resolveScaledCollisionBoxes(fbx);
       const yAxis = new THREE.Vector3(0, 1, 0);
 
       for (const box of collisionBoxes) {
-        const halfExtents = new CANNON.Vec3(box.size.x / 2, box.size.y / 2, box.size.z / 2);
-        const centerOffset = new CANNON.Vec3(box.center.x, box.center.y, box.center.z);
-        this.cannonBody.addShape(new CANNON.Box(halfExtents), centerOffset);
-
         const wireframeBox = createWireframeBox(box.size, 0x00ff44);
         const rotatedOffset = box.center.clone().applyAxisAngle(yAxis, this.rotationY);
         wireframeBox.position.copy(this.spawnPos).add(rotatedOffset);
@@ -84,10 +69,8 @@ export class Building extends Entity implements IDebuggable {
         this.debugWireframeGroup.add(wireframeBox);
       }
 
-      this.physics.world.addBody(this.cannonBody);
-
-      // Compute world clearance bounding box from actual collider shapes (avoids stray mesh vertices)
-      this.computeClearanceBounds(collisionBoxes);
+      // Compute world compound collider boxes & clearance union bounds (avoids stray mesh vertices)
+      this.computeColliderBounds(collisionBoxes);
     } catch (e) {
       console.warn(`Could not load building model ${this.blueprint.modelUrl}:`, e);
     }
@@ -162,10 +145,12 @@ export class Building extends Entity implements IDebuggable {
     ];
   }
 
-  private computeClearanceBounds(
+  private computeColliderBounds(
     collisionBoxes: Array<{ size: THREE.Vector3; center: THREE.Vector3 }>
   ): void {
     this.boundingBox.makeEmpty();
+    this.colliderBoxes.length = 0;
+
     const yAxis = new THREE.Vector3(0, 1, 0);
     const cos = Math.abs(Math.cos(this.rotationY));
     const sin = Math.abs(Math.sin(this.rotationY));
@@ -180,6 +165,7 @@ export class Building extends Entity implements IDebuggable {
         new THREE.Vector3(worldCenter.x - halfX, worldCenter.y - halfY, worldCenter.z - halfZ),
         new THREE.Vector3(worldCenter.x + halfX, worldCenter.y + halfY, worldCenter.z + halfZ)
       );
+      this.colliderBoxes.push(shapeBox);
       this.boundingBox.union(shapeBox);
     }
   }
@@ -190,13 +176,5 @@ export class Building extends Entity implements IDebuggable {
 
   public update(_delta: number): void {
     // Static scenery requires no per-frame tick
-  }
-
-  public override destroy(): void {
-    super.destroy();
-    if (this.cannonBody) {
-      this.physics.world.removeBody(this.cannonBody);
-      this.cannonBody = undefined;
-    }
   }
 }

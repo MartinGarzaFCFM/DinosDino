@@ -15,6 +15,10 @@ export interface GameEventMap {
   toggle_sfx: boolean;
   toggle_wireframe_debug: void;
   wireframe_debug_toggled: { enabled: boolean };
+  toggle_dev_vision: void;
+  dev_vision_toggled: { enabled: boolean };
+  toggle_camera_mode: void;
+  camera_mode_changed: { mode: 'CHASE' | 'REXY_FOCUS' };
   start_game_request: { difficulty: Difficulty; level: LevelTheme };
   resume_game: void;
   return_to_menu: void;
@@ -24,7 +28,10 @@ export interface GameEventMap {
   player_damaged: { amount: number; health: number };
   player_healed: { amount: number; health: number };
   player_speed_bonus: { bonus: number };
+  player_stunned: { duration: number };
+  player_recovered: void;
   player_died: void;
+  hazard_state_changed: { inHazard: boolean; name: string };
 
   // Pickups & Objectives
   egg_collected: { id: string };
@@ -33,8 +40,17 @@ export interface GameEventMap {
 
   // Dinosaur AI Events
   rexy_attack: { position: THREE.Vector3; direction: THREE.Vector3 };
+  rexy_roar: { position: THREE.Vector3; shockwaveRadius: number };
+  rexy_roar_cast_started: { duration: number; shockwaveRadius: number; rexyPos: THREE.Vector3 };
+  rexy_roar_cast_progress: { elapsed: number; duration: number; progress: number; shockwaveRadius: number; rexyPos: THREE.Vector3; distToPlayer: number };
+  rexy_roar_hit: { distance: number };
+  rexy_roar_escaped: { distance: number; radius: number };
+  rexy_state_changed: { state: string };
   rexy_slow_requested: { amount: number };
   rexy_slowed: { speed: number };
+
+  // Screen & Camera FX
+  camera_trauma: { amount: number };
 }
 
 export type EventKey = keyof GameEventMap;

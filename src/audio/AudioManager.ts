@@ -152,6 +152,49 @@ export class AudioManager {
     osc.stop(this.ctx!.currentTime + 0.3);
   }
 
+  public playRoar(): void {
+    if (!this.isSfxEnabled) return;
+    this.initContext();
+
+    const osc = this.ctx!.createOscillator();
+    const gain = this.ctx!.createGain();
+
+    // Deep predatory ground-trembling rumble
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(65, this.ctx!.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(115, this.ctx!.currentTime + 0.3);
+    osc.frequency.exponentialRampToValueAtTime(32, this.ctx!.currentTime + 0.85);
+
+    gain.gain.setValueAtTime(0.75, this.ctx!.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + 0.9);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain!);
+    osc.start();
+    osc.stop(this.ctx!.currentTime + 0.9);
+  }
+
+  public playEngineStall(): void {
+    if (!this.isSfxEnabled) return;
+    this.initContext();
+
+    const osc = this.ctx!.createOscillator();
+    const gain = this.ctx!.createGain();
+
+    // Sputtering engine stall audio
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(95, this.ctx!.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(22, this.ctx!.currentTime + 0.45);
+
+    gain.gain.setValueAtTime(0.45, this.ctx!.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + 0.5);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain!);
+    osc.start();
+    osc.stop(this.ctx!.currentTime + 0.5);
+  }
+
   public setMusicEnabled(enabled: boolean): void {
     this.isMusicEnabled = enabled;
     if (enabled) {
@@ -166,9 +209,13 @@ export class AudioManager {
   }
 
   private setupListeners(): void {
+    this.bus.on('start_game_request', () => this.playEngineStart());
     this.bus.on('egg_collected', () => this.playChime(660));
     this.bus.on('pickup_collected', () => this.playChime(880));
     this.bus.on('player_healed', () => this.playChime(1046));
     this.bus.on('player_damaged', () => this.playImpact());
+    this.bus.on('player_stunned', () => this.playEngineStall());
+    this.bus.on('player_recovered', () => this.playEngineStart());
+    this.bus.on('rexy_roar', () => this.playRoar());
   }
 }

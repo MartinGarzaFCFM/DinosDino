@@ -14,18 +14,16 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'dist',
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/three/examples/')) {
+          const normalizedId = id.replace(/\\/g, '/');
+          if (normalizedId.includes('node_modules/three/examples/')) {
             return 'vendor-three-addons';
           }
-          if (id.includes('node_modules/three/')) {
+          if (normalizedId.includes('node_modules/three/')) {
             return 'vendor-three';
-          }
-          if (id.includes('node_modules/cannon-es/')) {
-            return 'vendor-physics';
           }
         }
       }

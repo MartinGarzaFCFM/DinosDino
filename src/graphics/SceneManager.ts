@@ -32,6 +32,7 @@ export class SceneManager {
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
+    this.sunLight.shadow.radius = 2;
     this.sunLight.shadow.camera.near = 10;
     this.sunLight.shadow.camera.far = 1500;
     const d = 450;

@@ -6,11 +6,11 @@ import { Renderer } from '../graphics/Renderer.ts';
 import { SceneManager } from '../graphics/SceneManager.ts';
 import { CameraController } from '../graphics/CameraController.ts';
 import { DebugVisualsManager } from '../graphics/DebugVisualsManager.ts';
-import { PhysicsWorld } from '../physics/PhysicsWorld.ts';
 import { TerrainBody } from '../physics/TerrainBody.ts';
 import { InputManager } from '../input/InputManager.ts';
 import { AudioManager } from '../audio/AudioManager.ts';
 import { UIManager } from '../ui/UIManager.ts';
+import { DevVisionOverlay } from '../ui/DevVisionOverlay.ts';
 import { Vehicle } from '../entities/vehicle/Vehicle.ts';
 import { Rexy } from '../entities/dinosaur/Rexy.ts';
 import { Environment } from '../entities/scenery/Environment.ts';
@@ -34,11 +34,11 @@ export class Game {
   private sceneManager!: SceneManager;
   private cameraController!: CameraController;
   private debugVisuals!: DebugVisualsManager;
-  private physicsWorld!: PhysicsWorld;
   private terrain!: TerrainBody;
   private inputManager!: InputManager;
   private audioManager!: AudioManager;
   private uiManager!: UIManager;
+  private devVisionOverlay?: DevVisionOverlay;
   private environment!: Environment;
   private pickupSpawner!: PickupSpawner;
 
@@ -74,12 +74,11 @@ export class Game {
     this.cameraController = new CameraController(this.container);
     this.debugVisuals = new DebugVisualsManager(this.sceneManager.scene, this.bus);
 
-    this.physicsWorld = new PhysicsWorld();
-    this.terrain = new TerrainBody(this.physicsWorld);
+    this.terrain = new TerrainBody();
     this.sceneManager.attachTerrain(this.terrain.group, this.terrain.mesh);
 
-    this.environment = new Environment(this.sceneManager.scene, this.physicsWorld, this.loader);
-    this.pickupSpawner = new PickupSpawner(this.environment, this.bus, this.loader);
+    this.environment = new Environment(this.sceneManager.scene, this.loader);
+    this.pickupSpawner = new PickupSpawner(this.environment, this.bus, this.loader, this.terrain);
 
     this.debugVisuals.register(this.terrain);
     this.debugVisuals.register(this.environment);
@@ -87,6 +86,14 @@ export class Game {
     this.inputManager = new InputManager();
     this.audioManager = AudioManager.getInstance();
     this.uiManager = new UIManager(document.getElementById('app-container')!, this.bus);
+
+    // Developer Vision (Active in Dev mode only)
+    if (import.meta.env.DEV) {
+      this.devVisionOverlay = new DevVisionOverlay(
+        document.getElementById('app-container')!,
+        this.bus
+      );
+    }
 
     this.setupBusListeners();
 
@@ -100,7 +107,7 @@ export class Game {
     this.audioManager.playBGM();
 
     // 4. Start Main Loop
-    this.time.resetAccumulator();
+    this.time.reset();
     this.loop();
   }
 
@@ -117,7 +124,7 @@ export class Game {
 
     this.bus.on('resume_game', () => {
       if (this.state === GameState.PAUSED) {
-        this.time.resetAccumulator();
+        this.time.reset();
         this.state = GameState.PLAYING;
         this.uiManager.setScreen(GameState.PLAYING);
       }
@@ -138,10 +145,32 @@ export class Game {
       this.cameraController.addTrauma(0.65);
     });
 
+    this.bus.on('rexy_roar', () => {
+      this.cameraController.addTrauma(0.4);
+    });
+
+    this.bus.on('camera_trauma', ({ amount }) => {
+      this.cameraController.addTrauma(amount);
+    });
+
+    this.bus.on('toggle_dev_vision', () => {
+      this.devVisionOverlay?.toggle();
+    });
+
+    this.bus.on('toggle_camera_mode', () => {
+      const mode = this.cameraController.toggleMode();
+      this.bus.emit('camera_mode_changed', { mode });
+    });
+
     this.bus.on('egg_collected', () => {
       if (this.state !== GameState.PLAYING) return;
       this.collectedEggs++;
       this.bus.emit('eggs_updated', { collected: this.collectedEggs, total: this.totalEggs });
+
+      // Enrage Rexy when few eggs remain to heighten endgame pressure
+      if (this.totalEggs - this.collectedEggs <= 2) {
+        this.rexy?.setEnraged(true);
+      }
 
       if (this.collectedEggs >= this.totalEggs) {
         this.state = GameState.VICTORY;
@@ -162,24 +191,31 @@ export class Game {
     const token = ++this.expeditionToken;
     this.state = GameState.LOADING;
     this.clearEntities();
-
-    // 1. Setup Theme Atmosphere & Scenery
-    await this.sceneManager.setupEnvironment(this.currentLevel);
-    await this.environment.buildTheme(this.currentLevel);
-    if (token !== this.expeditionToken) return;
+    this.uiManager.setScreen(GameState.LOADING);
 
     const preset = DIFFICULTY_PRESETS[this.currentDifficulty];
+
+    // 1. Atmosphere & Environment
+    await this.sceneManager.setupEnvironment(this.currentLevel);
+    if (token !== this.expeditionToken) return;
+
+    await this.environment.buildTheme(this.currentLevel);
+    if (token !== this.expeditionToken) {
+      this.environment.clear();
+      return;
+    }
 
     // 2. Spawn Player Vehicle
     const { x: px, y: py, z: pz } = ARENA_CONFIG.playerSpawn;
     const player = new Vehicle(
-      'player',
-      this.physicsWorld,
+      'player_halftrack',
       new THREE.Vector3(px, py, pz),
       this.bus,
       this.loader
     );
-    player.baseEngineForce = preset.vehicleSpeed;
+    player.maxSpeedKmh = preset.vehicleSpeed;
+    player.setTerrain(this.terrain);
+    player.setEnvironment(this.environment);
     await player.loadModel();
     if (token !== this.expeditionToken) {
       player.destroy();
@@ -189,9 +225,6 @@ export class Game {
     this.player = player;
     this.sceneManager.scene.add(player.group);
     this.debugVisuals.register(player);
-
-    this.cameraController.snapTo(player.position, player.quaternion);
-    this.audioManager.playEngineStart();
 
     // 3. Spawn Rexy Pursuer
     const { x: rx, y: ry, z: rz } = ARENA_CONFIG.rexySpawn;
@@ -203,6 +236,12 @@ export class Game {
       this.loader
     );
     rexy.setTarget(player);
+    rexy.setEnvironment(this.environment);
+    rexy.setTerrain(this.terrain);
+    if (this.currentDifficulty === 'Hard') {
+      rexy.setEnraged(true);
+    }
+
     await rexy.loadModel();
     if (token !== this.expeditionToken) {
       rexy.destroy();
@@ -212,8 +251,10 @@ export class Game {
     this.rexy = rexy;
     this.sceneManager.scene.add(rexy.group);
     this.debugVisuals.register(rexy);
+    this.cameraController.snapTo(player.position, player.quaternion, rexy.position);
+    this.devVisionOverlay?.attachEntities(player, rexy, this.cameraController);
 
-    // 4. Spawn Collectibles
+    // 4. Spawn Collectibles with Terrain Elevation Awareness
     const pickups = await this.pickupSpawner.spawnMatchPickups(preset.eggCount, player);
     if (token !== this.expeditionToken) {
       pickups.forEach((p) => p.destroy());
@@ -234,9 +275,11 @@ export class Game {
       max: VEHICLE_CONFIG.maxHealth
     });
     this.bus.emit('player_speed_bonus', { bonus: 0 });
+    this.bus.emit('hazard_state_changed', { inHazard: false, name: '' });
+    this.bus.emit('player_recovered');
 
     this.debugVisuals.syncAll();
-    this.time.resetAccumulator();
+    this.time.reset();
     this.state = GameState.PLAYING;
     this.uiManager.setScreen(GameState.PLAYING);
   }
@@ -272,35 +315,38 @@ export class Game {
       if (this.state === GameState.PLAYING) {
         this.state = GameState.PAUSED;
       } else {
-        this.time.resetAccumulator();
+        this.time.reset();
         this.state = GameState.PLAYING;
       }
       this.uiManager.setScreen(this.state);
     }
 
     if (inputs.toggleCamera) {
-      this.cameraController.toggleMode();
+      const mode = this.cameraController.toggleMode();
+      this.bus.emit('camera_mode_changed', { mode });
     }
 
     if (inputs.toggleWireframe) {
       this.debugVisuals.toggle();
     }
 
-    if (this.state === GameState.PLAYING) {
-      this.time.resetSubSteps();
-      while (this.time.shouldDoPhysicsStep()) {
-        this.physicsWorld.step(this.time.fixedDelta);
-      }
+    if (inputs.toggleDevVision) {
+      this.devVisionOverlay?.toggle();
+    }
 
+    if (this.state === GameState.PLAYING) {
       if (this.player) {
+        const surface = this.terrain.getSurfaceAt(this.player.position.x, this.player.position.z);
         this.player.applyInputs(inputs);
-        this.player.update(this.time.delta);
+        this.player.update(this.time.delta, surface);
         this.uiManager.updateSpeed(this.player.currentSpeedKmh);
 
         this.cameraController.update(
           this.player.position,
           this.player.quaternion,
-          this.time.delta
+          this.time.delta,
+          this.player.currentSpeedKmh,
+          this.rexy?.position
         );
         this.sceneManager.updateLightTarget(this.player.position);
       }
@@ -315,6 +361,9 @@ export class Game {
         }
       }
     }
+
+    // Update Developer Vision telemetry overlay (dev mode only)
+    this.devVisionOverlay?.update(this.player, this.rexy, this.terrain, this.cameraController);
 
     this.renderer.render(this.sceneManager.scene, this.cameraController.camera);
   }

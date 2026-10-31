@@ -31,16 +31,19 @@ export class PickupSpawner {
   private readonly obstacleQuery: IObstacleQuery;
   private readonly bus: IEventBus;
   private readonly loader: IAssetLoader;
+  private readonly terrain?: { getHeightAt(x: number, z: number): number };
   private readonly origin = new THREE.Vector3(0, 0, 0);
 
   constructor(
     obstacleQuery: IObstacleQuery,
     bus: IEventBus = EventBus.getInstance(),
-    loader: IAssetLoader = AssetLoader.getInstance()
+    loader: IAssetLoader = AssetLoader.getInstance(),
+    terrain?: { getHeightAt(x: number, z: number): number }
   ) {
     this.obstacleQuery = obstacleQuery;
     this.bus = bus;
     this.loader = loader;
+    this.terrain = terrain;
   }
 
   public async spawnMatchPickups(eggCount: number, target: IPickupTarget): Promise<Pickup[]> {
@@ -91,7 +94,10 @@ export class PickupSpawner {
     const candidate = new THREE.Vector3();
 
     for (let attempt = 0; attempt < 80; attempt++) {
-      candidate.set((Math.random() - 0.5) * bound * 2, 0, (Math.random() - 0.5) * bound * 2);
+      const rx = (Math.random() - 0.5) * bound * 2;
+      const rz = (Math.random() - 0.5) * bound * 2;
+      const ry = this.terrain ? this.terrain.getHeightAt(rx, rz) : 0;
+      candidate.set(rx, ry, rz);
 
       if (candidate.distanceToSquared(this.origin) < minOriginDistSq) {
         continue;
@@ -105,11 +111,9 @@ export class PickupSpawner {
     // Safe fallback ring outside player origin if arena is dense
     const fallbackAngle = Math.random() * Math.PI * 2;
     const fallbackDist = ARENA_CONFIG.minDistanceFromOrigin + 20;
-    return new THREE.Vector3(
-      Math.cos(fallbackAngle) * fallbackDist,
-      0,
-      Math.sin(fallbackAngle) * fallbackDist
-    );
+    const fx = Math.cos(fallbackAngle) * fallbackDist;
+    const fz = Math.sin(fallbackAngle) * fallbackDist;
+    const fy = this.terrain ? this.terrain.getHeightAt(fx, fz) : 0;
+    return new THREE.Vector3(fx, fy, fz);
   }
 }
-

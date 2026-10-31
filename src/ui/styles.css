@@ -381,3 +381,602 @@ html, body {
   font-weight: 700;
   margin: 0 2px;
 }
+
+
+/* ==========================================================================
+   Developer Vision Overlay (Dev Only)
+   ========================================================================== */
+.dev-vision-panel {
+  position: absolute;
+  top: 76px;
+  right: 28px;
+  width: 330px;
+  max-height: 88vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  z-index: 99;
+  pointer-events: auto;
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  background: rgba(11, 15, 25, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 240, 255, 0.2);
+  user-select: none;
+}
+
+.dev-vision-panel::-webkit-scrollbar {
+  width: 5px;
+}
+.dev-vision-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.dev-vision-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 4px;
+}
+.dev-vision-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.6);
+}
+
+.dev-vision-panel.hidden {
+  display: none !important;
+}
+
+.dev-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.dev-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+}
+
+.dev-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  display: inline-block;
+}
+
+.dev-fps {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.dev-keyhint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.dev-section {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dev-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.dev-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.dev-label {
+  color: #94a3b8;
+}
+
+.dev-value {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.dev-state-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dev-state-badge.state-chasing {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 170, 0, 0.4);
+}
+
+.dev-state-badge.state-sprinting {
+  background: rgba(255, 51, 102, 0.25);
+  color: #ff3366;
+  border: 1px solid rgba(255, 51, 102, 0.6);
+  animation: pulse-danger 0.8s infinite alternate;
+}
+
+.dev-state-badge.state-recovering {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.dev-feed-section {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.dev-action-log {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 110px;
+  overflow: hidden;
+}
+
+.dev-log-item {
+  font-size: 0.66rem;
+  line-height: 1.25;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dev-log-time {
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.dev-log-tag {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+/* Tabs */
+.dev-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dev-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dev-tab-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dev-tab-btn.active {
+  color: var(--primary);
+  background: rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.dev-tab-content {
+  display: none;
+}
+
+.dev-tab-content.active {
+  display: block;
+}
+
+/* Rexy AI Freeze Toggle Control */
+.dev-freeze-bar {
+  margin-bottom: 10px;
+}
+
+.dev-freeze-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 170, 0, 0.12);
+  border: 1px solid rgba(255, 170, 0, 0.35);
+  color: #ffaa00;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dev-freeze-btn:hover {
+  background: rgba(255, 170, 0, 0.22);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.25);
+}
+
+.dev-freeze-btn.frozen {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: rgba(0, 240, 255, 0.6);
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+}
+
+.dev-freeze-status {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: #cbd5e1;
+}
+
+.dev-freeze-btn.frozen .dev-freeze-status {
+  background: rgba(0, 240, 255, 0.28);
+  color: #ffffff;
+}
+
+.dev-state-badge.state-frozen {
+  background: rgba(0, 240, 255, 0.25);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+/* Tuning Sliders */
+.dev-slider-item {
+  margin-bottom: 8px;
+}
+
+.dev-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.dev-slider-val {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.dev-slider-desc {
+  font-size: 0.61rem;
+  color: #94a3b8;
+  line-height: 1.3;
+  margin-top: 3px;
+  margin-bottom: 7px;
+  opacity: 0.85;
+}
+
+.dev-slider {
+  width: 100%;
+  height: 5px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dev-slider:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dev-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--primary);
+  transition: transform 0.1s ease;
+}
+
+.dev-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #fff;
+}
+
+.dev-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 6px var(--primary);
+}
+
+/* Action Buttons */
+.dev-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dev-action-btn {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 7px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.dev-copy-btn {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.35);
+  color: var(--primary);
+}
+
+.dev-copy-btn:hover {
+  background: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.dev-reset-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.dev-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+/* ========================================================
+   FFXIV / WoW Style Boss Cast Bar (Rexy Roar Telegraph)
+   ======================================================== */
+.rexy-cast-container {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  width: 90%;
+  max-width: 480px;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: castSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rexy-cast-container.fade-out {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+@keyframes castSlideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.rexy-cast-card {
+  padding: 10px 18px 12px 18px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(255, 170, 0, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 102, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.rexy-cast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rexy-cast-badge-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 100, 0, 0.6));
+}
+
+.rexy-cast-text-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.rexy-cast-boss-name {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffaa00;
+  text-transform: uppercase;
+}
+
+.rexy-cast-spell-name {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+  line-height: 1.1;
+}
+
+.rexy-cast-countdown {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+.rexy-cast-track {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.rexy-cast-fill {
+  position: relative;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff4500 0%, #ff8c00 60%, #ffd700 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 12px #ff8c00, inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  transition: width 0.05s linear;
+}
+
+.rexy-cast-spark {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 0 10px #ffffff, 0 0 18px #ffd700;
+  animation: sparkPulse 0.3s infinite alternate;
+}
+
+@keyframes sparkPulse {
+  from { opacity: 0.7; transform: scaleY(0.9); }
+  to { opacity: 1; transform: scaleY(1.2); }
+}
+
+.rexy-cast-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.rexy-cast-status.in-danger {
+  color: #ff3366;
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.6);
+  animation: dangerPulse 0.4s infinite alternate;
+}
+
+@keyframes dangerPulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; transform: scale(1.02); }
+}
+
+.rexy-cast-status.safe {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+}
+
+.rexy-cast-hint {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+}
+
+.rexy-cast-container.cast-success .rexy-cast-card {
+  border-color: #00ff88;
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+}
+
+.rexy-cast-container.cast-success .rexy-cast-fill {
+  background: linear-gradient(90deg, #00b4d8 0%, #00ff88 100%);
+  box-shadow: 0 0 16px #00ff88;
+}
+
+.rexy-cast-container.cast-failed .rexy-cast-card {
+  border-color: #ff0055;
+  box-shadow: 0 0 35px rgba(255, 0, 85, 0.5);
+  animation: castFailShake 0.4s ease-in-out;
+}
+
+@keyframes castFailShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+
+/* Camera Mode Pill & Rexy Cam Badge */
+.camera-pill {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.camera-pill.active {
+  color: #00ff88;
+  border-color: rgba(0, 255, 136, 0.7);
+  background: rgba(0, 255, 136, 0.2);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.35);
+}
+
+.rexy-cam-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  letter-spacing: 1px;
+  animation: rexyCamPulse 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes rexyCamPulse {
+  0% { box-shadow: 0 0 4px rgba(0, 240, 255, 0.3); transform: scale(1); }
+  100% { box-shadow: 0 0 14px rgba(0, 240, 255, 0.65); transform: scale(1.03); }
+}

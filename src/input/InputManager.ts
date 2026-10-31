@@ -9,6 +9,7 @@ export interface InputState {
   handbrake: boolean;
   toggleCamera: boolean;
   toggleWireframe: boolean;
+  toggleDevVision: boolean;
   resetVehicle: boolean;
   pause: boolean;
 }
@@ -21,6 +22,20 @@ export class InputManager {
     handbrake: false,
     toggleCamera: false,
     toggleWireframe: false,
+    toggleDevVision: false,
+    resetVehicle: false,
+    pause: false
+  };
+
+  // Reusable snapshot object to avoid per-frame object spread allocations
+  private readonly snapshot: InputState = {
+    throttle: 0,
+    steering: 0,
+    brake: false,
+    handbrake: false,
+    toggleCamera: false,
+    toggleWireframe: false,
+    toggleDevVision: false,
     resetVehicle: false,
     pause: false
   };
@@ -66,6 +81,9 @@ export class InputManager {
     if (key === 'f') {
       this.state.toggleWireframe = true;
     }
+    if (key === '`' || key === '~' || key === 'v') {
+      this.state.toggleDevVision = true;
+    }
     if (key === 'r') {
       this.state.resetVehicle = true;
     }
@@ -98,17 +116,24 @@ export class InputManager {
     this.state.brake = brake;
     this.state.handbrake = this.keysDown.has('shift') || brake;
 
-    const snapshot: InputState = {
-      ...this.state
-    };
+    this.snapshot.throttle = this.state.throttle;
+    this.snapshot.steering = this.state.steering;
+    this.snapshot.brake = this.state.brake;
+    this.snapshot.handbrake = this.state.handbrake;
+    this.snapshot.toggleCamera = this.state.toggleCamera;
+    this.snapshot.toggleWireframe = this.state.toggleWireframe;
+    this.snapshot.toggleDevVision = this.state.toggleDevVision;
+    this.snapshot.resetVehicle = this.state.resetVehicle;
+    this.snapshot.pause = this.state.pause;
 
     // Reset one-shot edge triggers after consuming
     this.state.toggleCamera = false;
     this.state.toggleWireframe = false;
+    this.state.toggleDevVision = false;
     this.state.resetVehicle = false;
     this.state.pause = false;
 
-    return snapshot;
+    return this.snapshot;
   }
 
   public dispose(): void {

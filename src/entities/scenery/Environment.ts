@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { LevelTheme } from '../../core/GameState.ts';
-import { PhysicsWorld } from '../../physics/PhysicsWorld.ts';
 import { Building } from './Building.ts';
 import { IDebuggable, IObstacleQuery } from '../Entity.ts';
 import { BUILDING_BLUEPRINTS, LEVEL_REGISTRY } from '../../config/LevelRegistry.ts';
@@ -9,7 +8,6 @@ import { AssetLoader, IAssetLoader } from '../../graphics/AssetLoader.ts';
 export class Environment implements IObstacleQuery, IDebuggable {
   private buildings: Building[] = [];
   private readonly scene: THREE.Scene;
-  private readonly physics: PhysicsWorld;
   private readonly loader: IAssetLoader;
   private isDebugVisible: boolean = false;
 
@@ -18,11 +16,9 @@ export class Environment implements IObstacleQuery, IDebuggable {
 
   constructor(
     scene: THREE.Scene,
-    physics: PhysicsWorld,
     loader: IAssetLoader = AssetLoader.getInstance()
   ) {
     this.scene = scene;
-    this.physics = physics;
     this.loader = loader;
   }
 
@@ -43,7 +39,6 @@ export class Environment implements IObstacleQuery, IDebuggable {
         pos,
         placement.rotationY,
         scale,
-        this.physics,
         this.loader
       );
       await building.load();
@@ -82,5 +77,57 @@ export class Environment implements IObstacleQuery, IDebuggable {
       }
     }
     return true;
+  }
+
+  /**
+   * Resolves horizontal 2D compound AABB collision against all buildings.
+   * Broadphase-checks the building union box first, then resolves against each compound collider
+   * so L-shaped buildings (e.g., Cabin open porch) remain accurately drivable.
+   */
+  public resolveCollision(pos: THREE.Vector3, radius: number = 2.8): boolean {
+    let collided = false;
+    for (const b of this.buildings) {
+      if (b.boundingBox.isEmpty()) continue;
+
+      const uMin = b.boundingBox.min;
+      const uMax = b.boundingBox.max;
+      if (
+        pos.x + radius <= uMin.x ||
+        pos.x - radius >= uMax.x ||
+        pos.z + radius <= uMin.z ||
+        pos.z - radius >= uMax.z
+      ) {
+        continue;
+      }
+
+      for (const shapeBox of b.colliderBoxes) {
+        const min = shapeBox.min;
+        const max = shapeBox.max;
+        if (
+          pos.x + radius > min.x &&
+          pos.x - radius < max.x &&
+          pos.z + radius > min.z &&
+          pos.z - radius < max.z
+        ) {
+          collided = true;
+          const pushLeft = pos.x + radius - min.x;
+          const pushRight = max.x - (pos.x - radius);
+          const pushBack = pos.z + radius - min.z;
+          const pushFront = max.z - (pos.z - radius);
+
+          const minPush = Math.min(pushLeft, pushRight, pushBack, pushFront);
+          if (minPush === pushLeft) {
+            pos.x = min.x - radius;
+          } else if (minPush === pushRight) {
+            pos.x = max.x + radius;
+          } else if (minPush === pushBack) {
+            pos.z = min.z - radius;
+          } else {
+            pos.z = max.z + radius;
+          }
+        }
+      }
+    }
+    return collided;
   }
 }
